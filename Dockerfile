@@ -22,4 +22,4 @@ EXPOSE 5000
 
 # ENVIRONMENT env var is injected by the Container App (staging | prod).
 # set_env.py reads it from os.environ when no positional arg is supplied.
-CMD ["python", "app.py", "--port", "5000"]
+CMD ["python", "app.py"]
