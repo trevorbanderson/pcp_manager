@@ -75,7 +75,7 @@ stages:
 
           az deployment group create \
             --resource-group $(devResourceGroup) \
-            --template-file bicep/pcp-manager.bicep \
+            --template-file $(Build.SourcesDirectory)/bicep/pcp-manager.bicep \
             --parameters \
                 location="$(location)" \
                 envName="$(envName)" \
@@ -84,6 +84,20 @@ stages:
                 keyVaultName="$(keyVaultName)" \
                 dbHost="$(dbHost)" \
                 registryPassword="$REGISTRY_PASSWORD"
+
+          # Grant Key Vault Secrets User to the container app's managed identity
+          PRINCIPAL_ID=$(az deployment group show \
+            --resource-group $(devResourceGroup) \
+            --name pcp-manager \
+            --query properties.outputs.managedIdentityPrincipalId.value -o tsv)
+
+          KV_ID=$(az keyvault show --name $(keyVaultName) --query id -o tsv)
+
+          az role assignment create \
+            --assignee-object-id "$PRINCIPAL_ID" \
+            --assignee-principal-type ServicePrincipal \
+            --role "4633458b-17de-408a-b874-0445c86b69e0" \
+            --scope "$KV_ID" 2>/dev/null || echo "Role assignment already exists, skipping"
 
 # ── 3. Manual approval gate ───────────────────────────────────────────────
 - stage: ManualApproval
@@ -124,7 +138,7 @@ stages:
 
           az deployment group create \
             --resource-group $(prodResourceGroup) \
-            --template-file bicep/pcp-manager.bicep \
+            --template-file $(Build.SourcesDirectory)/bicep/pcp-manager.bicep \
             --parameters \
                 location="$(location)" \
                 envName="$(envName)" \
@@ -133,3 +147,17 @@ stages:
                 keyVaultName="$(keyVaultName)" \
                 dbHost="$(dbHost)" \
                 registryPassword="$REGISTRY_PASSWORD"
+
+          # Grant Key Vault Secrets User to the container app's managed identity
+          PRINCIPAL_ID=$(az deployment group show \
+            --resource-group $(prodResourceGroup) \
+            --name pcp-manager \
+            --query properties.outputs.managedIdentityPrincipalId.value -o tsv)
+
+          KV_ID=$(az keyvault show --name $(keyVaultName) --query id -o tsv)
+
+          az role assignment create \
+            --assignee-object-id "$PRINCIPAL_ID" \
+            --assignee-principal-type ServicePrincipal \
+            --role "4633458b-17de-408a-b874-0445c86b69e0" \
+            --scope "$KV_ID" 2>/dev/null || echo "Role assignment already exists, skipping"

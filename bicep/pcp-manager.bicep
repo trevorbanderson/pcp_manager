@@ -48,10 +48,6 @@ resource containerAppEnv 'Microsoft.App/managedEnvironments@2023-05-01' existing
   name: envName
 }
 
-resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
-  name: keyVaultName
-}
-
 // ── Container App ─────────────────────────────────────────────────────────
 resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: appName
@@ -132,20 +128,8 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
   }
 }
 
-// ── Key Vault RBAC: grant the app's managed identity Secrets User ─────────
-// Role: Key Vault Secrets User = 4633458b-17de-408a-b874-0445c86b69e0
-var kvSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e0'
-
-resource kvRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, containerApp.id, kvSecretsUserRoleId)
-  scope: keyVault
-  properties: {
-    roleDefinitionId: '/providers/Microsoft.Authorization/roleDefinitions/${kvSecretsUserRoleId}'
-    principalId: containerApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
 // ── Outputs ───────────────────────────────────────────────────────────────
+// Note: Key Vault Secrets User role assignment is handled by the pipeline
+// (az role assignment create) so the deployment SP needs no roleAssignments/write.
 output containerAppFqdn string = containerApp.properties.configuration.ingress.fqdn
 output managedIdentityPrincipalId string = containerApp.identity.principalId
