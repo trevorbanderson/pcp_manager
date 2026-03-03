@@ -2415,5 +2415,6 @@ if __name__ == '__main__':
     _parser.add_argument('--port', '-p', type=int, default=5000)
     _args, _ = _parser.parse_known_args()
     _env = os.getenv('ENVIRONMENT', 'dev')
-    app.run(debug=(_env != 'prod'), host='0.0.0.0', port=_args.port)
+    # Only enable debug for 'dev' environment
+    app.run(debug=(_env == 'dev'), host='0.0.0.0', port=_args.port)
 
