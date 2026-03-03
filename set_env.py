@@ -133,7 +133,7 @@ class AzureKeyVaultConfig:
                 "No Key Vault URL found. Set AZURE_KEY_VAULT_URL in .env or environment."
             )
 
-        prefixes    = {"dev": "dev-", "staging": "staging-", "prod": "prod-"}
+        # Remove all environment-based secret prefixes
         use_mi_default = "true" if environment == "prod" else "false"
         use_mi      = os.getenv("USE_MANAGED_IDENTITY", use_mi_default).lower() == "true"
 
@@ -142,7 +142,7 @@ class AzureKeyVaultConfig:
 
         return EnvironmentConfig(
             key_vault_url        = kv_url,
-            secret_prefix        = prefixes.get(environment, "dev-"),
+            secret_prefix        = "",  # No prefix for any environment
             use_managed_identity = use_mi,
             tenant_id            = os.getenv("AZURE_TENANT_ID"),
         )
@@ -332,8 +332,7 @@ class EnvironmentSetup:
             kv.set_environment_variables()
             logger.warning(
                 f"Azure Key Vault secrets loaded  "
-                f"(vault={kv.env_config.key_vault_url}, "
-                f"prefix='{kv.env_config.secret_prefix}')"
+                f"(vault={kv.env_config.key_vault_url}, no prefix used)"
             )
         except Exception as exc:
             print(f"Warning: could not load Key Vault secrets: {exc}")
