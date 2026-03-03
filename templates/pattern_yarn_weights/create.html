@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Add Pattern Yarn Weight{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 15px;">
+    <h2 style="margin: 0; display: inline-block;">Add Pattern Yarn Weight</h2>
+    <a href="{{ url_for('pattern_yarn_weights_list') }}" class="btn btn-secondary" style="float: right;">Back to List</a>
+</div>
+
+<form method="POST">
+    <div style="margin-bottom: 8px;">
+        <label for="pattern_id" style="display: block; margin-bottom: 3px;">Pattern:</label>
+        <select id="pattern_id" name="pattern_id" required style="padding: 4px 8px; width: 300px;" onchange="window.location='?pattern_id='+this.value;">
+            <option value="">Select a pattern...</option>
+            {% for pattern in patterns %}
+            <option value="{{ pattern['id'] }}" {% if selected_pattern_id and pattern['id']|string == selected_pattern_id %}selected{% endif %}>{{ pattern['name'] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="margin-bottom: 8px;">
+        <label for="yarn_weight_id" style="display: block; margin-bottom: 3px;">Yarn Weight:</label>
+        <select id="yarn_weight_id" name="yarn_weight_id" required style="padding: 4px 8px; width: 300px;">
+            <option value="">Select a yarn weight...</option>
+            {% for yarn_weight in yarn_weights %}
+            <option value="{{ yarn_weight['id'] }}">{{ yarn_weight['weight_name'] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ current_user.full_name }} at (auto-set on save)</p>
+
+    <div style="margin-top: 12px;">
+        <button type="submit" class="btn btn-primary btn-sm">Create</button>
+        <a href="{{ url_for('pattern_yarn_weights_list') }}" class="btn btn-secondary btn-sm">Cancel</a>
+    </div>
+</form>
+{% endblock %}

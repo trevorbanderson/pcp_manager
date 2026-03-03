@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment / secrets (NEVER commit)
+.env
+
+# VS Code
+.vscode/settings.json
+
+# IDE
+.idea/
+*.sw?
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs (keep logs/ directory via .gitkeep, ignore all log content)
+logs/*.log
+logs/*.log.*
+
+# VPN client binaries (not part of the app)
+vpnclient/
+vpnclient_final/
+vpnclient_updated/
+
+# Other
+*.log

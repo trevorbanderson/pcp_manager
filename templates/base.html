@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %}PCP Pattern Manager{% endblock %}</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+                <!-- Quill Rich Text Editor -->
+                <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+                <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+                <style>
+                    .quill-wrapper { width: 500px; }
+                    .ql-container { min-height: 200px; width: 100%; }
+                    .ql-toolbar.ql-snow { border-radius: 0 0 4px 4px; border-top: none; width: 100%; margin-top: 0; }
+                    .ql-toolbar.ql-snow .ql-formats { margin-right: 8px; }
+                </style>
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    var quillEl = document.getElementById('quill_text_to_display');
+                    var toolbarEl = document.getElementById('quill_toolbar');
+                    var form = document.querySelector('form');
+                    if (quillEl && toolbarEl && form) {
+                        var quill = new Quill('#quill_text_to_display', {
+                            theme: 'snow',
+                            modules: {
+                                toolbar: { container: '#quill_toolbar' }
+                            }
+                        });
+                        // Set initial value if textarea has content
+                        var textarea = document.getElementById('text_to_display');
+                        if (textarea && textarea.value) {
+                            quill.root.innerHTML = textarea.value;
+                        }
+                        form.addEventListener('submit', function() {
+                            textarea.value = quill.root.innerHTML;
+                        });
+                    }
+                });
+                </script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                if (document.getElementById('text_to_display')) {
+                    CKEDITOR.replace('text_to_display', { height: 200 });
+                }
+            });
+        </script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <div class="navbar-left">
+                <h1><a href="{{ url_for('index') }}">PCP Pattern Manager</a></h1>
+                <ul class="nav-menu">
+                    <li class="dropdown">
+                        <a href="#" class="dropbtn">Pattern</a>
+                        <div class="dropdown-content">
+                            <a href="{{ url_for('patterns_list') }}">Patterns</a>
+                            <a href="{{ url_for('pattern_elements_list') }}">Pattern Elements</a>
+                        </div>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropbtn">Reference</a>
+                        <div class="dropdown-content">
+                            <a href="{{ url_for('elements_list') }}">Elements</a>
+                            <a href="{{ url_for('measurements_list') }}">Measurements</a>
+                            <a href="{{ url_for('yarn_weights_list') }}">Yarn Weights</a>
+                            <a href="{{ url_for('pattern_categories_list') }}">Categories</a>
+                            <a href="{{ url_for('age_list') }}">Ages</a>
+                            <a href="{{ url_for('size_list') }}">Sizes</a>
+                            <a href="{{ url_for('level_of_difficulty_list') }}">Level of Difficulty</a>
+                            <a href="{{ url_for('pieces_list') }}">Pieces</a>
+                            <a href="{{ url_for('pcp_info_list') }}">PCP Info</a>
+                        </div>
+                    </li>
+                    <li><a href="{{ url_for('step_list') }}">Step</a></li>
+                    {% if current_user.is_authenticated and current_user.is_admin %}
+                    <li class="dropdown">
+                        <a href="#" class="dropbtn">Admin</a>
+                        <div class="dropdown-content">
+                            <a href="{{ url_for('users_list') }}">Users</a>
+                        </div>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% if current_user.is_authenticated %}
+            <div class="navbar-user">
+                {% if not current_user.totp_secret %}
+                <a href="{{ url_for('mfa_setup_totp') }}" class="navbar-totp-warning" title="Set up authenticator app for stronger MFA">&#128274; Set up TOTP</a>
+                {% endif %}
+                <span class="navbar-username">&#128100; {{ current_user.username }}</span>
+                <a href="{{ url_for('logout') }}" class="navbar-logout">Logout</a>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+        <div class="container-fluid">
+            <p>&copy; 2026 PCP Database Manager</p>
+        </div>
+    </footer>
+
+    <!-- Loading overlay shown on any form submit or navigation action -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+    <style>
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(255,255,255,0.55);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        #loading-overlay.active {
+            display: flex;
+        }
+        .spinner {
+            width: 52px; height: 52px;
+            border: 6px solid #dde;
+            border-top-color: #3498db;
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+    <script>
+        (function () {
+            function showOverlay() {
+                document.getElementById('loading-overlay').classList.add('active');
+                document.body.style.cursor = 'wait';
+            }
+            // All form submissions
+            document.querySelectorAll('form').forEach(function (form) {
+                form.addEventListener('submit', showOverlay);
+            });
+            // Logout link (anchor navigation)
+            document.querySelectorAll('.navbar-logout').forEach(function (a) {
+                a.addEventListener('click', showOverlay);
+            });
+        })();
+    </script>
+</body>
+</html>

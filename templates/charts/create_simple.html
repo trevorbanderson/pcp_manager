@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header" style="margin-bottom: 15px;">
+    <h2 style="margin: 0;">
+        Charts for Pattern{% if pattern_name %} - {{ pattern_name }}{% endif %}
+        {% if edit_mode %} (Edit Chart){% else %} (Create Chart){% endif %}
+    </h2>
+</div>
+
+<form method="POST" style="max-width: 600px;">
+    <input type="hidden" name="pattern_id" value="{{ pattern_id }}">
+    
+    <div style="margin-bottom: 8px;">
+        <label for="name" style="display: block; margin-bottom: 3px;">Chart Name:</label>
+        <input type="text" id="name" name="name" style="width: 300px; padding: 4px 8px;" required value="{{ chart.name if chart else '' }}">
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+        <div>
+            <label for="piece_id" style="display: block; margin-bottom: 3px;">Piece:</label>
+            <select id="piece_id" name="piece_id" style="width: 100%; padding: 4px 8px;" required>
+                <option value="">Select Piece</option>
+                {% for piece in pieces %}
+                <option value="{{ piece.id }}" {% if chart and chart.piece_id == piece.id %}selected{% endif %}>{{ piece.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div>
+            <label for="age_id" style="display: block; margin-bottom: 3px;">Age Group:</label>
+            <select id="age_id" name="age_id" style="width: 100%; padding: 4px 8px;" required>
+                <option value="">Select Age</option>
+                {% for age in ages %}
+                <option value="{{ age.id }}" {% if chart and chart.age_id == age.id %}selected{% endif %}>{{ age.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div>
+            <label for="size_id" style="display: block; margin-bottom: 3px;">Size:</label>
+            <select id="size_id" name="size_id" style="width: 100%; padding: 4px 8px;" required>
+                <option value="">Select Size</option>
+                {% for size in sizes %}
+                <option value="{{ size.id }}" {% if chart and chart.size_id == size.id %}selected{% endif %}>{{ size.abbreviation }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+        <div>
+            <label for="num_rows" style="display: block; margin-bottom: 3px;">Rows:</label>
+            <input type="number" id="num_rows" name="num_rows" min="1" style="width: 80px; padding: 4px 8px;" required value="{{ chart.num_rows if chart else '10' }}">
+        </div>
+        
+        <div>
+            <label for="num_columns" style="display: block; margin-bottom: 3px;">Columns:</label>
+            <input type="number" id="num_columns" name="num_columns" min="1" style="width: 80px; padding: 4px 8px;" required value="{{ chart.num_columns if chart else '10' }}">
+        </div>
+        
+        <div>
+            <label for="repeat_column_start" style="display: block; margin-bottom: 3px;">Repeat Start:</label>
+            <input type="number" id="repeat_column_start" name="repeat_column_start" min="1" style="width: 80px; padding: 4px 8px;" value="{{ chart.repeat_column_start if chart else '' }}">
+        </div>
+        
+        <div>
+            <label for="repeat_column_end" style="display: block; margin-bottom: 3px;">Repeat End:</label>
+            <input type="number" id="repeat_column_end" name="repeat_column_end" min="1" style="width: 80px; padding: 4px 8px;" value="{{ chart.repeat_column_end if chart else '' }}">
+            <div style="font-size: 11px; color: #666; margin-top: 2px;">Must be greater than start</div>
+        </div>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+        <label style="display: block; margin-bottom: 3px;">Chart Grid:</label>
+        <div id="chart-grid-container" style="display: inline-block; position: relative; border: 1px solid #bbb; background: #fafaff;">
+            <table id="chart-grid" style="border-collapse: collapse;">
+                <!-- Grid will be rendered here -->
+            </table>
+            <div id="resize-handle" style="position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; background: #e0e0e0; border: 1px solid #aaa; border-radius: 3px; cursor: se-resize; display: flex; align-items: flex-end; justify-content: flex-end; z-index: 10;">
+                <span style="font-size: 16px; color: #888; user-select: none;">&#x2922;</span>
+            </div>
+        </div>
+        <div style="font-size: 12px; color: #888; margin-top: 2px;">Drag the corner to resize grid, or use the number fields above.</div>
+    </div>
+
+    <div style="margin-bottom: 8px;">
+        <label for="instructions" style="display: block; margin-bottom: 3px;">Instructions:</label>
+        <textarea id="instructions" name="instructions" maxlength="100" rows="2" style="width: 100%; max-width: 500px; padding: 4px 8px;">{{ chart.instructions if chart else '' }}</textarea>
+    </div>
+    
+    <div style="margin-bottom: 12px;">
+        <label for="created_by" style="display: block; margin-bottom: 3px;">Updated By:</label>
+        <input type="text" id="created_by" name="created_by" value="{{ current_user.username }}" style="width: 150px; padding: 4px 8px;">
+    </div>
+    
+    <div>
+        <button type="submit" class="btn btn-primary btn-sm" style="height:32px;">{% if edit_mode %}Update Chart{% else %}Create Chart{% endif %}</button>
+        <a href="{{ url_for('charts_list', pattern_id=pattern_id) }}" class="btn btn-sm" style="height:32px; line-height: 22px;">Cancel</a>
+    </div>
+</form>
+
+<script>
+console.log('Script tag loaded');
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded - script is working');
+    
+    const numRowsInput = document.getElementById('num_rows');
+    const numColsInput = document.getElementById('num_columns');
+    const gridTable = document.getElementById('chart-grid');
+    const resizeHandle = document.getElementById('resize-handle');
+    const nameInput = document.getElementById('name');
+    const pieceSelect = document.getElementById('piece_id');
+    const ageSelect = document.getElementById('age_id');
+    const sizeSelect = document.getElementById('size_id');
+    
+    if (!numRowsInput || !numColsInput || !gridTable || !resizeHandle || !nameInput || !pieceSelect || !ageSelect || !sizeSelect) {
+        console.error('Required elements not found');
+        console.log('numRowsInput:', numRowsInput);
+        console.log('numColsInput:', numColsInput);
+        console.log('gridTable:', gridTable);
+        console.log('resizeHandle:', resizeHandle);
+        console.log('nameInput:', nameInput);
+        console.log('pieceSelect:', pieceSelect);
+        console.log('ageSelect:', ageSelect);
+        console.log('sizeSelect:', sizeSelect);
+        return;
+    }
+    
+    console.log('All elements found, resize handle:', resizeHandle);
+    
+    let isResizing = false;
+    let startX, startY, startRows, startCols;
+    
+    // Function to handle size dropdown based on age selection
+    function handleAgeChange() {
+        const ageText = ageSelect.selectedOptions[0]?.text || '';
+        
+        if (ageText.toLowerCase() === 'adult') {
+            // Enable size dropdown when Adult is selected
+            sizeSelect.disabled = false;
+            sizeSelect.style.opacity = '1';
+        } else {
+            // Disable and reset size dropdown for non-adult ages
+            sizeSelect.disabled = true;
+            sizeSelect.style.opacity = '0.6';
+            sizeSelect.value = '';
+            // Add "NA" option if it doesn't exist
+            let naOption = Array.from(sizeSelect.options).find(option => option.value === 'na');
+            if (!naOption) {
+                naOption = document.createElement('option');
+                naOption.value = 'na';
+                naOption.text = 'NA';
+                sizeSelect.insertBefore(naOption, sizeSelect.firstChild.nextSibling);
+            }
+            sizeSelect.value = 'na';
+        }
+        updateChartName();
+    }
+    
+    // Function to update chart name based on selected piece, age, and size
+    function updateChartName() {
+        const pieceText = pieceSelect.selectedOptions[0]?.text || '';
+        const ageText = ageSelect.selectedOptions[0]?.text || '';
+        const sizeText = sizeSelect.selectedOptions[0]?.text || '';
+        
+        // Update name if piece and age are selected
+        if (pieceSelect.value && ageSelect.value) {
+            if (ageText.toLowerCase() === 'adult' && sizeSelect.value && sizeSelect.value !== 'na') {
+                nameInput.value = `${pieceText} - ${ageText} - ${sizeText}`;
+            } else {
+                nameInput.value = `${pieceText} - ${ageText} - NA`;
+            }
+        }
+    }
+    
+    // Add event listeners
+    pieceSelect.addEventListener('change', updateChartName);
+    ageSelect.addEventListener('change', handleAgeChange);
+    sizeSelect.addEventListener('change', updateChartName);
+    
+    // Initialize size dropdown state on page load
+    handleAgeChange();
+    
+    function renderGrid(rows, cols) {
+        console.log('Rendering grid:', rows, 'x', cols);
+        gridTable.innerHTML = '';
+        
+        const repeatStart = parseInt(document.getElementById('repeat_column_start').value) || 0;
+        const repeatEnd = parseInt(document.getElementById('repeat_column_end').value) || 0;
+        
+        for (let r = 0; r < rows; r++) {
+            const tr = document.createElement('tr');
+            for (let c = 0; c < cols; c++) {
+                const td = document.createElement('td');
+                td.style.width = '40px';
+                td.style.height = '40px';
+                td.style.border = '1px solid #888';
+                td.style.background = '#fff';
+                td.style.textAlign = 'center';
+                td.style.verticalAlign = 'middle';
+                td.textContent = ''; // Ensure no text content
+                
+                // Apply repeat styling (columns are 1-indexed in the form but 0-indexed in the loop)
+                const colNum = c + 1;
+                if (repeatStart > 0 && repeatEnd > 0 && colNum >= repeatStart && colNum <= repeatEnd) {
+                    td.style.background = '#e6f3ff';  // Light blue background for repeat section
+                }
+                
+                // Add repeat markers
+                if (repeatStart > 0 && colNum === repeatStart) {
+                    td.style.borderLeft = '3px solid #0066cc';  // Thick blue left border for repeat start
+                }
+                if (repeatEnd > 0 && colNum === repeatEnd) {
+                    td.style.borderRight = '3px solid #0066cc';  // Thick blue right border for repeat end
+                }
+                
+                // Add hidden input for form submission
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = `cell_symbol_${r}_${c}`;
+                hiddenInput.value = '';
+                td.appendChild(hiddenInput);
+                
+                tr.appendChild(td);
+            }
+            gridTable.appendChild(tr);
+        }
+    }
+    
+    // Drag handle functionality
+    resizeHandle.addEventListener('mousedown', function(e) {
+        isResizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startRows = parseInt(numRowsInput.value) || 1;
+        startCols = parseInt(numColsInput.value) || 1;
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        const cellSize = 40;
+
+        const newCols = Math.max(1, startCols + Math.round(deltaX / cellSize));
+        const newRows = Math.max(1, startRows + Math.round(deltaY / cellSize));
+
+        if (newCols !== parseInt(numColsInput.value)) {
+            numColsInput.value = newCols;
+        }
+        if (newRows !== parseInt(numRowsInput.value)) {
+            numRowsInput.value = newRows;
+        }
+
+        renderGrid(newRows, newCols);
+    });
+
+    document.addEventListener('mouseup', function() {
+        isResizing = false;
+    });
+    
+    // Initial render
+    const initialRows = parseInt(numRowsInput.value) || 10;
+    const initialCols = parseInt(numColsInput.value) || 10;
+    console.log('Initial render:', initialRows, initialCols);
+    renderGrid(initialRows, initialCols);
+    
+    // Update on input change
+    [numRowsInput, numColsInput].forEach(input => {
+        input.addEventListener('input', function() {
+            const rows = parseInt(numRowsInput.value) || 1;
+            const cols = parseInt(numColsInput.value) || 1;
+            renderGrid(rows, cols);
+        });
+    });
+    
+    // Update grid when repeat start/end values change
+    const repeatStartInput = document.getElementById('repeat_column_start');
+    const repeatEndInput = document.getElementById('repeat_column_end');
+    
+    // Function to validate repeat start/end values
+    function validateRepeatColumns() {
+        const startVal = parseInt(repeatStartInput.value) || 0;
+        const endVal = parseInt(repeatEndInput.value) || 0;
+        
+        // Clear any previous error styling
+        repeatStartInput.style.borderColor = '';
+        repeatEndInput.style.borderColor = '';
+        
+        // Only validate if both have values
+        if (startVal > 0 && endVal > 0) {
+            if (endVal <= startVal) {
+                // Show error styling
+                repeatStartInput.style.borderColor = '#ff4444';
+                repeatEndInput.style.borderColor = '#ff4444';
+                
+                // Clear the invalid end value
+                repeatEndInput.value = '';
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    [repeatStartInput, repeatEndInput].forEach(input => {
+        input.addEventListener('input', function() {
+            if (validateRepeatColumns()) {
+                const rows = parseInt(numRowsInput.value) || 1;
+                const cols = parseInt(numColsInput.value) || 1;
+                renderGrid(rows, cols);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

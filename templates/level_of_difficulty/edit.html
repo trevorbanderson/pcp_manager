@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Level of Difficulty{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Edit Level of Difficulty</h2>
+</div>
+<form method="post" enctype="multipart/form-data">
+    <div class="form-group">
+        <label for="name">Name</label>
+        <input type="text" class="form-control" id="name" name="name" value="{{ level.name }}" required>
+    </div>
+    <div class="form-group">
+        <label for="seq">Sequence</label>
+        <input type="number" class="form-control" id="seq" name="seq" value="{{ level.seq }}" required>
+    </div>
+    <div class="form-group">
+        <label for="symbol">Symbol (JPEG, optional)</label>
+        <input type="file" class="form-control" id="symbol" name="symbol" accept="image/jpeg">
+        <div style="font-size: 0.9em; color: #888;">JPEG only. 48x48 or 64x64px for best results.</div>
+        {% if level.symbol %}
+            <div style="margin-top:8px;">
+                <img src="data:image/jpeg;base64,{{ level.symbol | b64encode }}" style="width: 160px; height: 25px; background: #fff; padding: 2px; image-rendering: auto; border: 1px solid #ccc;">
+            </div>
+        {% endif %}
+    </div>
+    <div class="form-group">
+        <label for="is_active">Active?</label>
+        <input type="checkbox" id="is_active" name="is_active" value="1" {% if level.is_active %}checked{% endif %}>
+    </div>
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ get_full_name(level.created_by) }} at {{ level.created_at | fmt_dt }}</p>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{{ url_for('level_of_difficulty_list') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

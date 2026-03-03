@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Pattern Categories{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Pattern Categories</h2>
+    <a href="{{ url_for('pattern_categories_create') }}" class="btn btn-primary">Add Category</a>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th title="Primary key for the knitting pattern category">ID</th>
+            <th title="Sub-category of the knitting pattern e.g. Cowl, Dog Coat etc.">Sub-Category</th>
+            <th title="Category of the knitting pattern e.g. Accessory, Garment etc.">Category</th>
+            <th title="User who created the knitting pattern category entry">Updated By</th>
+            <th title="The time when the knitting pattern category was added to the database">Updated At</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for category in categories %}
+        <tr>
+            <td>{{ category.id }}</td>
+            <td>{{ category.sub_category }}</td>
+            <td>{{ category.category }}</td>
+            <td>{{ category.created_by or '' }}</td>
+            <td>{{ category.created_at | fmt_dt }}</td>
+            <td class="actions">
+                <a href="{{ url_for('pattern_categories_edit', id=category.id) }}" class="btn btn-sm">Edit</a>
+                <form method="POST" action="{{ url_for('pattern_categories_delete', id=category.id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

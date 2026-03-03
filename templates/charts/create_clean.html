@@ -1,0 +1,3222 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header" style="margin-bottom: 15px;">
+    <h2 style="margin: 0;">{% if edit_mode %}Edit Chart{% else %}Create Chart{% endif %}{% if pattern_name %} - {{ pattern_name }}{% endif %}</h2>
+</div>
+
+<form method="POST" style="max-width: 1000px;" id="chartForm">
+    <input type="hidden" name="pattern_id" value="{{ pattern_id }}">
+    
+    <!-- Main layout: selections on left, calculation on right -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px; padding-left: 0; margin-left: 0;">
+        <!-- Left column: Form selections -->
+        <div style="padding-left: 0; margin-left: 0; text-align: left;">
+            <!-- Row 1: Dropdowns all same width -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px;">
+                <div>
+                    <label for="piece_id" style="display: block; margin-bottom: 3px; font-size: 13px;">Piece:</label>
+                    <select id="piece_id" name="piece_id" style="width: 100%; padding: 4px 8px; height: 34px;" required autocomplete="off">
+                        <option value="">Select Piece</option>
+                        {% for piece in pieces %}
+                        <option value="{{ piece.id }}"{% if edit_mode and chart.piece_id == piece.id %} selected{% endif %}>{{ piece.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="age_id" style="display: block; margin-bottom: 3px; font-size: 13px;">Age Group:</label>
+                    <select id="age_id" name="age_id" style="width: 100%; padding: 4px 8px; height: 34px;" required autocomplete="off">
+                        <option value="">Select Age</option>
+                        {% for age in ages %}
+                        <option value="{{ age.id }}"{% if edit_mode and chart.age_id == age.id %} selected{% endif %}>{{ age.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="size_id" style="display: block; margin-bottom: 3px; font-size: 13px;">Size:</label>
+                    <select id="size_id" name="size_id" style="width: 100%; padding: 4px 8px; height: 34px;" required autocomplete="off">
+                        <option value="">Select Size</option>
+                        {% for size in sizes %}
+                        <option value="{{ size.id }}"{% if edit_mode and chart.size_id == size.id %} selected{% endif %}>{{ size.abbreviation or size.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="gender_id" style="display: block; margin-bottom: 3px; font-size: 13px;">Gender:</label>
+                    <select id="gender_id" name="gender_id" style="width: 100%; padding: 4px 8px; height: 34px;" required autocomplete="off">
+                        <option value="">Select Gender</option>
+                        {% for gender in genders %}
+                        <option value="{{ gender.id }}"{% if edit_mode and chart.gender_id == gender.id %} selected{% endif %}>{{ gender.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <!-- Chart name display below gender -->
+            <div style="margin-bottom: 10px;">
+                <span id="chart-name-display" title="" style="font-size: 11px; color: #6c757d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 100%; cursor: default;"></span>
+            </div>
+            <!-- Row 2: Description and Instructions -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                <div>
+                    <label for="description" style="display: block; margin-bottom: 3px; font-size: 13px;">Description:</label>
+                    <textarea id="description" name="description" style="width: 100%; height: 56px; padding: 4px 8px; resize: vertical;">{% if edit_mode %}{{ chart.description or '' }}{% endif %}</textarea>
+                </div>
+                <div>
+                    <label for="instructions" style="display: block; margin-bottom: 3px; font-size: 13px;">Instructions:</label>
+                    <textarea id="instructions" name="instructions" maxlength="100" style="width: 100%; height: 56px; padding: 4px 8px; resize: vertical;" autocomplete="off">{% if edit_mode %}{{ chart.instructions or '' }}{% endif %}</textarea>
+                </div>
+            </div>
+            
+            <input type="hidden" id="name" name="name" required value="{% if edit_mode %}{{ chart.name }}{% endif %}">
+        </div>
+        
+        <!-- Right column: Calculation explanation -->
+        <div>
+            <div id="calculation-explanation" style="display: none; padding: 6px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; font-size: 11px; line-height: 1.4;">
+                <div style="font-weight: bold; color: #0c5460; margin-bottom: 4px; font-size: 12px;">DMN Calculation</div>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
+                    <tr>
+                        <td style="color: #666; padding: 1px 4px 1px 0; white-space: nowrap;">Piece:</td>
+                        <td><span id="calc-piece">—</span></td>
+                        <td style="color: #666; padding: 1px 0 1px 8px; white-space: nowrap;">Body Part:</td>
+                        <td><span id="calc-body-part">—</span></td>
+                    </tr>
+                    <tr>
+                        <td style="color: #666; padding: 1px 4px 1px 0; white-space: nowrap;">Measurement:</td>
+                        <td><span id="calc-measurement">—</span></td>
+                        <td style="color: #666; padding: 1px 0 1px 8px; white-space: nowrap;">Gauge (r/s per 4"):</td>
+                        <td><span id="calc-gauge">—</span></td>
+                    </tr>
+                </table>
+                <div style="font-family: monospace; background-color: #e9ecef; padding: 4px 6px; border-radius: 3px; margin-bottom: 4px;">
+                    <div><strong>Rows:</strong> <span id="rows-calculation">—</span></div>
+                    <div><strong>Stitches:</strong> <span id="stitches-calculation">—</span></div>
+                </div>
+                <div style="color: #666; font-size: 10px;"><span id="calculation-status">Select piece, age, size and gender</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; padding-left: 0; margin-left: 0;">
+        <div style="padding-left: 0; margin-left: 0; text-align: left;">
+            <label for="num_rows" style="display: block; margin-bottom: 3px;">Rows:</label>
+            <input type="number" id="num_rows" name="num_rows" min="1" style="width: 80px; padding: 4px 8px;" value="{% if edit_mode and chart.num_rows %}{{ chart.num_rows }}{% else %}0{% endif %}" {% if edit_mode %}readonly class="edit-bg"{% else %}disabled{% endif %} autocomplete="off">
+        </div>
+        
+        <div style="padding-left: 0; margin-left: 0; text-align: left;">
+            <label for="num_columns" style="display: block; margin-bottom: 3px;">Stitches:</label>
+            <input type="number" id="num_columns" name="num_columns" min="1" style="width: 80px; padding: 4px 8px;" value="{% if edit_mode and chart.num_columns %}{{ chart.num_columns }}{% else %}0{% endif %}" {% if edit_mode %}readonly class="edit-bg"{% else %}disabled{% endif %} autocomplete="off">
+        </div>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+        <div id="grid-size-display" style="display: none;">Grid: 0x0 - Select piece, age, size, and gender to calculate dimensions</div>
+        
+        <!-- Section Management Controls -->
+        <div id="section-controls" style="display: none; margin-bottom: 10px; padding: 10px; border-radius: 4px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <button type="button" id="manage-row-sections-btn" class="btn btn-small" style="background: #17a2b8; color: white;">
+                    Manage Row Sections
+                </button>
+                <span id="row-sections-summary" style="font-size: 12px; color: #666;">
+                    No row sections defined
+                </span>
+            </div>
+        </div>
+        
+        <div id="chart-grid-container" style="display: none; width: 600px; height: 400px; min-width: 320px; min-height: 220px; overflow: auto; position: relative; box-sizing: border-box; resize: both; margin-left: 0; padding-left: 0; display: flex; flex-direction: column; align-items: flex-start;">
+            <table id="chart-grid" style="border-collapse: separate; border-spacing: 0;">
+                <!-- Grid will be rendered here -->
+            </table>
+        </div>
+        <div id="grid-message" style="font-size: 12px; color: #888; margin-top: 2px;">Chart grid will appear once dimensions are calculated.</div>
+    </div>
+    
+    {% if edit_mode %}
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ get_full_name(chart.created_by) }} at {{ chart.created_at | fmt_dt }}</p>
+    {% else %}
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ current_user.full_name }} at (auto-set on save)</p>
+    {% endif %}
+    <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+        <button type="submit" id="submit-btn" class="btn btn-primary" style="height: 38px;" {% if not edit_mode %}disabled{% endif %}>{% if edit_mode %}Update Chart{% else %}Create Chart{% endif %}</button>
+        <a href="{% if pattern_id %}/charts?pattern_id={{ pattern_id }}{% else %}/charts{% endif %}" class="btn btn-secondary" style="height: 38px; display: flex; align-items: center; justify-content: center;">Cancel</a>
+    </div>
+</form>
+
+<!-- Symbol Selection Modal -->
+<div id="symbolModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+    <div id="symbolModalContent" style="background-color: #fefefe; margin: 10% auto; padding: 15px; width: 400px; max-width: 90%; border: 1px solid #888; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0; font-size: 16px;">Select Symbol</h4>
+            <button id="closeModal" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #aaa;">&times;</button>
+        </div>
+        
+        <div id="modalLoadingMessage" style="display: none; text-align: center; padding: 40px; color: #666;">
+            <div style="font-size: 14px; margin-bottom: 8px;">Loading symbols...</div>
+            <div style="font-size: 12px;">Please wait</div>
+        </div>
+        
+        <div id="modalSymbolGrid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; max-height: 250px; overflow-y: auto; margin-bottom: 12px;">
+            <!-- Empty/Clear option -->
+            <div class="modal-symbol-option" data-symbol-id="" style="width: 40px; height: 25px; border: 2px solid #dc3545; background: #fff8f8; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 3px;" title="Clear Cell">
+                <span style="font-size: 18px; color: #dc3545; line-height: 1;">✕</span>
+                <span style="font-size: 7px; color: #dc3545; font-weight: bold; margin-top: 1px;">CLEAR</span>
+            </div>
+            
+            <!-- NO STITCH option (always second) -->
+            {% for element in elements %}
+            {% if element.description == 'NO STITCH' %}
+            <div class="modal-symbol-option" data-symbol-id="{{ element.id }}" data-symbol-desc="{{ element.description }}" data-symbol-abbr="{{ element.abbrieviation or element.description[:2] }}" data-has-symbol="{{ 'true' if element.symbol else 'false' }}" style="width: 40px; height: 25px; border: 1px solid #ccc; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 3px;" title="{{ element.description }}">
+                {% if element.symbol %}
+                <img data-src="{{ url_for('element_symbol', id=element.id) }}" alt="{{ element.description }}" style="width: 35px; height: 20px; object-fit: contain; display: none;">
+                {% else %}
+                <span style="font-size: 10px; font-weight: bold; color: #333;">{{ element.abbrieviation or element.description[:2] }}</span>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% endfor %}
+            
+            <!-- Dynamic symbols (all except NO STITCH) -->
+            {% for element in elements %}
+            {% if element.description != 'NO STITCH' %}
+            <div class="modal-symbol-option" data-symbol-id="{{ element.id }}" data-symbol-desc="{{ element.description }}" data-symbol-abbr="{{ element.abbrieviation or element.description[:2] }}" data-has-symbol="{{ 'true' if element.symbol else 'false' }}" style="width: 40px; height: 25px; border: 1px solid #ccc; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 3px;" title="{{ element.description }}">
+                {% if element.symbol %}
+                <img data-src="{{ url_for('element_symbol', id=element.id) }}" alt="{{ element.description }}" style="width: 35px; height: 20px; object-fit: contain; display: none;">
+                {% else %}
+                <span style="font-size: 10px; font-weight: bold; color: #333;">{{ element.abbrieviation or element.description[:2] }}</span>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        
+        <div style="text-align: right;">
+            <button id="cancelModal" style="background: #f8f9fa; border: 1px solid #ccc; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Row Section Management Modal -->
+<div id="rowSectionModal" style="display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+    <div style="background-color: #fefefe; margin: 5% auto; padding: 20px; width: 600px; max-width: 95%; border: 1px solid #888; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-height: 85vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="margin: 0; font-size: 18px;">Manage Row Sections</h4>
+            <button id="closeRowSectionModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #aaa;">&times;</button>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 4px; margin-bottom: 15px; font-size: 13px;">
+            <strong>Instructions:</strong> Define sections of rows that repeat together. Click "Add Row Section" to create a new repeating section.
+        </div>
+        
+        <!-- List of existing row sections -->
+        <div id="rowSectionList" style="margin-bottom: 15px;">
+            <!-- Will be populated by JavaScript -->
+        </div>
+        
+        <!-- Add new section button -->
+        <div style="margin-bottom: 15px;">
+            <button id="addRowSectionBtn" type="button" class="btn btn-small" style="background: #28a745; color: white;">
+                + Add Row Section
+            </button>
+        </div>
+        
+        <div style="text-align: right;">
+            <button id="saveRowSectionsBtn" style="background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;">Done</button>
+        </div>
+    </div>
+</div>
+
+<!-- Row Section Editor Modal (for adding/editing a single section) -->
+<div id="rowSectionEditorModal" style="display: none; position: fixed; z-index: 1002; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5);">
+    <div style="background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 500px; max-width: 90%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="margin: 0; font-size: 16px;" id="rowSectionEditorTitle">Add Row Section</h4>
+            <button id="closeRowSectionEditor" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #aaa;">&times;</button>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-size: 13px;">Row Range (chart reads bottom to top):</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 3px; font-size: 11px; color: #666;">Bottom Row</label>
+                    <input type="number" id="sectionStartRow" min="1" value="1" style="width: 100%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                <span style="margin-top: 18px;">to</span>
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 3px; font-size: 11px; color: #666;">Top Row</label>
+                    <input type="number" id="sectionEndRow" min="1" value="1" style="width: 100%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+            </div>
+            <div style="font-size: 11px; color: #666; margin-top: 5px;">Section contains <span id="sectionRowCount">1</span> row(s)</div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label for="sectionRepeatCount" style="display: block; margin-bottom: 5px; font-size: 13px;">Repeat Count:</label>
+            <input type="number" id="sectionRepeatCount" min="1" value="1" style="width: 100%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+            <div style="font-size: 11px; color: #666; margin-top: 5px;">This section will be worked <span id="sectionRepeatDisplay">1</span> time(s)</div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label for="sectionLabel" style="display: block; margin-bottom: 5px; font-size: 13px;">Label (optional):</label>
+            <input type="text" id="sectionLabel" maxlength="10" placeholder="e.g., A, B, C" style="width: 100%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+            <div style="font-size: 11px; color: #666; margin-top: 3px;">Will display next to row number in grid</div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label for="sectionInstructions" style="display: block; margin-bottom: 5px; font-size: 13px;">Instructions (optional):</label>
+            <textarea id="sectionInstructions" rows="3" placeholder="e.g., Work in stockinette stitch" style="width: 100%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; font-family: inherit; font-size: 13px;"></textarea>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <button id="manageRowSubsectionsBtn" type="button" class="btn btn-small" style="background: #6c757d; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">
+                Manage Row Sub-sections
+            </button>
+            <div id="rowSubsectionsSummary" style="font-size: 11px; color: #666; margin-top: 5px;">
+                No row sub-sections defined
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="cancelRowSectionEditor" style="background: #f8f9fa; border: 1px solid #ccc; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;">Cancel</button>
+            <button id="saveRowSection" style="background: #3498db; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;">Save Section</button>
+        </div>
+    </div>
+</div>
+
+<!-- Row Sub-section Management Modal -->
+<div id="rowSubsectionModal" style="display: none; position: fixed; z-index: 1003; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
+    <div style="background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 650px; max-width: 95%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-height: 85vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="margin: 0; font-size: 18px;">Manage Row Sub-sections</h4>
+            <button id="closeRowSubsectionModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #aaa;">&times;</button>
+        </div>
+        
+        <div style="background: #e7f3ff; padding: 12px; border-radius: 4px; margin-bottom: 15px; font-size: 13px;">
+            For row section: <strong><span id="currentRowSectionRangeSubsec">1-1</span></strong><br>
+            Split this into sub-sections, each with its own column repeat pattern.
+        </div>
+        
+        <!-- List of existing row subsections -->
+        <div id="rowSubsectionList" style="margin-bottom: 15px;">
+            <!-- Will be populated by JavaScript -->
+        </div>
+        
+        <!-- Add new subsection button -->
+        <div style="margin-bottom: 15px;">
+            <button id="addRowSubsectionBtn" type="button" class="btn btn-small" style="background: #28a745; color: white;">
+                + Add Row Sub-section
+            </button>
+        </div>
+        
+        <div style="text-align: right;">
+            <button id="saveRowSubsections" style="background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;">Done</button>
+        </div>
+    </div>
+</div>
+
+<!-- Row Sub-section Editor Modal -->
+<div id="rowSubsectionEditorModal" style="display: none; position: fixed; z-index: 1004; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7);">
+    <div style="background-color: #fefefe; margin: 8% auto; padding: 20px; border: 1px solid #888; width: 550px; max-width: 90%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="margin: 0; font-size: 16px;" id="rowSubsectionEditorTitle">Add Row Sub-section</h4>
+            <button id="closeRowSubsectionEditor" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #aaa;">&times;</button>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-size: 13px;">Row Range (chart reads bottom to top):</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 3px; font-size: 11px; color: #666;">Bottom Row</label>
+                    <input type="number" id="subsectionStartRow" min="1" value="1" style="width: 100%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                <span style="margin-top: 18px;">to</span>
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 3px; font-size: 11px; color: #666;">Top Row</label>
+                    <input type="number" id="subsectionEndRow" min="1" value="1" style="width: 100%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+            </div>
+            <div style="font-size: 11px; color: #666; margin-top: 5px;">Sub-section contains <span id="subsectionRowCount">1</span> row(s)</div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label for="subsectionLabel" style="display: block; margin-bottom: 5px; font-size: 13px;">Label (optional):</label>
+            <input type="text" id="subsectionLabel" maxlength="10" placeholder="e.g., A, B, C" style="width: 100%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+            <div style="font-size:11px; color: #666; margin-top: 3px;">Will display next to row number in grid</div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label for="subsectionInstructions" style="display: block; margin-bottom: 5px; font-size: 13px;">Instructions (optional):</label>
+            <textarea id="subsectionInstructions" rows="2" placeholder="e.g., Stockinette stitch" style="width: 100%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; font-family: inherit; font-size: 13px;"></textarea>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <button id="manageSubsectionColumnsBtn" type="button" class="btn btn-small" style="background: #17a2b8; color: white;">
+                Manage Column Sections for this Sub-section
+            </button>
+            <div id="subsectionColumnsSummary" style="font-size: 11px; color: #666; margin-top: 5px;">
+                No column sections defined
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="cancelRowSubsectionEditor" style="background: #f8f9fa; border: 1px solid #ccc; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;">Cancel</button>
+            <button id="saveRowSubsection" style="background: #3498db; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;">Save Sub-section</button>
+        </div>
+    </div>
+</div>
+
+<!-- Column Section Management Modal -->
+<div id="columnSectionModal" style="display: none; position: fixed; z-index: 1005; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8);">
+    <div style="background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 550px; max-width: 90%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-height: 75vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="margin: 0; font-size: 16px;">Manage Column Sections</h4>
+            <button id="closeColumnSectionModal" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #aaa;">&times;</button>
+        </div>
+        
+        <div style="background: #e7f3ff; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 12px;">
+            For row sub-section: <strong><span id="currentRowSubsectionRange">1-1</span></strong><br>
+            Define column ranges within this sub-section that repeat.
+        </div>
+        
+        <!-- List of column sections -->
+        <div id="columnSectionList" style="margin-bottom: 15px;">
+            <!-- Will be populated by JavaScript -->
+        </div>
+        
+        <!-- Add column section form -->
+        <div style="border-top: 1px solid #dee2e6; padding-top: 15px; margin-top: 15px;">
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 5px; font-size: 12px;">Column Range (chart reads right to left):</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="number" id="colSectionStartCol" min="1" placeholder="Right" style="width: 80px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                    <span>to</span>
+                    <input type="number" id="colSectionEndCol" min="1" placeholder="Left" style="width: 80px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                    <span style="font-size: 11px; color: #666;">(<span id="colSectionColCount">0</span> cols)</span>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <label for="colSectionRepeatCount" style="display: block; margin-bottom: 5px; font-size: 12px;">Repeat:</label>
+                <input type="number" id="colSectionRepeatCount" min="1" value="1" style="width: 100px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                <span style="font-size: 11px; color: #666; margin-left: 5px;">time(s)</span>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <label for="colSectionInstructions" style="display: block; margin-bottom: 5px; font-size: 12px;">Instructions (optional):</label>
+                <textarea id="colSectionInstructions" rows="2" style="width: 100%; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; font-family: inherit; font-size: 12px;"></textarea>
+            </div>
+            
+            <button id="addColumnSectionBtn" type="button" class="btn btn-small" style="background: #28a745; color: white; font-size: 12px;">
+                + Add Column Section
+            </button>
+        </div>
+        
+        <div style="text-align: right; margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;">
+            <button id="saveColumnSections" style="background: #3498db; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;">Done</button>
+        </div>
+    </div>
+</div>
+
+<!-- Subsection Grid Modal (for visual column selection) -->
+<div id="subsectionGridModal" style="display: none; position: fixed; z-index: 1006; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.85);">
+    <div style="background-color: #fefefe; margin: 2% auto; padding: 20px; border: 1px solid #888; width: 95%; max-width: 1400px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-height: 92vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <div>
+                <h4 style="margin: 0; font-size: 18px;">Subsection Grid - Define Column Repeats</h4>
+                <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                    <span id="subsectionGridBreadcrumb">Section 1-10 → Subsection 1-4</span>
+                </div>
+            </div>
+            <button id="closeSubsectionGrid" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #aaa;">&times;</button>
+        </div>
+        
+        <div style="background: #fff3cd; padding: 12px; border-radius: 4px; margin-bottom: 15px; font-size: 13px; border-left: 4px solid #ffc107;">
+            <strong>Instructions:</strong> Click and drag across column headers to select a range, then click "Create Column Section" to set repeat count.
+        </div>
+        
+        <!-- Column selection controls -->
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+            <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-size: 12px; font-weight: bold;">Selected Columns:</label>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="number" id="gridColStart" min="1" placeholder="Right" style="width: 70px; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;" readonly>
+                        <span>to</span>
+                        <input type="number" id="gridColEnd" min="1" placeholder="Left" style="width: 70px; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;" readonly>
+                        <span style="font-size: 11px; color: #666;">(<span id="gridColCount">0</span> columns)</span>
+                    </div>
+                </div>
+                <div>
+                    <label for="gridRepeatCount" style="display: block; margin-bottom: 5px; font-size: 12px; font-weight: bold;">Repeat Count:</label>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="number" id="gridRepeatCount" min="1" value="1" style="width: 90px; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+                        <span id="gridColRepeatDisplay" style="font-size: 11px; color: #666;"></span>
+                    </div>
+                </div>
+                <div>
+                    <label for="gridColInstructions" style="display: block; margin-bottom: 5px; font-size: 12px; font-weight: bold;">Instructions:</label>
+                    <input type="text" id="gridColInstructions" placeholder="Optional" style="width: 200px; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                <button id="createColumnSectionBtn" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;" disabled>
+                    Create Column Section
+                </button>
+                <button id="clearSelectionBtn" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px;">
+                    Clear Selection
+                </button>
+            </div>
+        </div>
+        
+        <!-- Existing column sections list -->
+        <div id="subsectionColumnSectionsList" style="margin-bottom: 15px;">
+            <!-- Will show existing column sections for this subsection -->
+        </div>
+        
+        <!-- The subsection mini-grid -->
+        <div style="border: 2px solid #dee2e6; border-radius: 4px; padding: 10px; background: white; overflow-x: auto;">
+            <div id="subsectionGridContainer"></div>
+        </div>
+        
+        <div style="text-align: right; margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;">
+            <button id="saveSubsectionGrid" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">Done & Return</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // No custom grid resize logic needed; using native CSS resize
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Chart Creation System Loading...');
+    
+    // Get form elements
+    const nameInput = document.getElementById('name');
+    const chartNameDisplay = document.getElementById('chart-name-display');
+    const pieceSelect = document.getElementById('piece_id');
+    const ageSelect = document.getElementById('age_id');
+    const sizeSelect = document.getElementById('size_id');
+    const genderSelect = document.getElementById('gender_id');
+    const numRowsInput = document.getElementById('num_rows');
+    const numColsInput = document.getElementById('num_columns');
+    const calculationStatus = document.getElementById('calculation-status');
+    const rowsCalculation = document.getElementById('rows-calculation');
+    const stitchesCalculation = document.getElementById('stitches-calculation');
+    const finalResult = document.getElementById('final-result');
+    const calculationExplanation = document.getElementById('calculation-explanation');
+    const submitBtn = document.getElementById('submit-btn');
+
+    // Keep chart name display in sync with the name input (hidden, set programmatically)
+    function syncChartNameDisplay() {
+        const val = nameInput?.value || '';
+        if (chartNameDisplay) {
+            chartNameDisplay.textContent = val;
+            chartNameDisplay.title = val;
+        }
+    }
+    syncChartNameDisplay();
+
+    // Modal state flag (declared early so it's available to updateDimensions)
+    let modalIsOpen = false;
+    
+    // Section-based repeat tracking (THREE-LEVEL HIERARCHY)
+    let rowSections = []; // Array of { id, startRow, endRow, repeatCount, instructions, rowSubsections: [] }
+    let nextSectionId = 1;
+    let nextSubsectionId = 1;
+    let currentEditingSectionIndex = null; // For editing existing row sections
+    let currentEditingSubsections = []; // Temporary storage when editing row subsections
+    let currentEditingSubsectionIndex = null; // For editing a specific subsection
+    let currentEditingColSections = []; // Temporary storage when editing column sections for a subsection
+    let currentEditingColSectionIndex = null; // Track which column section is being edited
+    let currentEditingGridColSectionIndex = null; // Track which grid column section is being edited
+    
+    // Subsection grid state (for visual column selection)
+    let subsectionGridActive = false;
+    let currentSubsectionForGrid = null; // Reference to the subsection being edited in grid view
+    let subsectionGridStartRow = 0;
+    let subsectionGridEndRow = 0;
+    let columnSelectionStart = null;
+    let columnSelectionEnd = null;
+    let isSelectingColumns = false;
+    
+    // Grid dimensions
+    let gridRows = 0;
+    let gridCols = 0;
+    
+    console.log('Elements found:', {
+        nameInput: !!nameInput,
+        pieceSelect: !!pieceSelect,
+        ageSelect: !!ageSelect,
+        sizeSelect: !!sizeSelect,
+        genderSelect: !!genderSelect,
+        numRowsInput: !!numRowsInput,
+        numColsInput: !!numColsInput,
+        calculationStatus: !!calculationStatus,
+        rowsCalculation: !!rowsCalculation,
+        stitchesCalculation: !!stitchesCalculation,
+        finalResult: !!finalResult,
+        calculationExplanation: !!calculationExplanation
+    });
+    
+    // Data for calculations
+    // Map pieceData to {id: is_human_part} for JS
+    const pieceData = {
+        {% for piece in pieces %}
+            {{ piece.id }}: {{ 'true' if piece.is_human_part else 'false' }}{% if not loop.last %},{% endif %}
+        {% endfor %}
+    };
+    const patternGauge = {{ pattern_gauge.gauge_stitches_p4inch if pattern_gauge and pattern_gauge.gauge_stitches_p4inch else 'null' }};
+    const patternRowsGauge = {{ pattern_gauge.gauge_rows_p4inch if pattern_gauge and pattern_gauge.gauge_rows_p4inch else 'null' }};
+
+    // Edit mode: load existing cell symbols
+    const editMode = {{ 'true' if edit_mode else 'false' }};
+    const cellSymbols = {{ cell_symbols | tojson if edit_mode and cell_symbols else '{}' }};
+    const savedRowSections = {{ row_sections | tojson if edit_mode and row_sections else '[]' }};
+    
+    console.log('=== EDIT MODE DEBUG ===');
+    console.log('Edit Mode:', editMode);
+    console.log('Cell Symbols:', cellSymbols);
+    console.log('Cell Symbols Keys:', Object.keys(cellSymbols));
+    console.log('Cell Symbols Count:', Object.keys(cellSymbols).length);
+    console.log('Saved Row Sections:', savedRowSections);
+    
+    console.log('DMN-based calculation system loaded:', { 
+        patternGauge, 
+        patternRowsGauge,
+        pieceCount: Object.keys(pieceData).length,
+        editMode: editMode,
+        cellSymbolsCount: Object.keys(cellSymbols).length
+    });
+    
+    // ======================
+    // SECTION MANAGEMENT FUNCTIONS
+    // ======================
+    
+    function updateRowSectionsSummary() {
+        const summary = document.getElementById('row-sections-summary');
+        if (!summary) return;
+        
+        if (rowSections.length === 0) {
+            summary.textContent = 'No row sections defined';
+            summary.style.color = '#666';
+        } else {
+            const totalRepeats = rowSections.reduce((sum, sec) => sum + sec.repeatCount, 0);
+            summary.textContent = `${rowSections.length} section(s) defined, ${totalRepeats} total repeat(s)`;
+            summary.style.color = '#28a745';
+        }
+    }
+    
+    function renderRowSectionList() {
+        const list = document.getElementById('rowSectionList');
+        if (!list) return;
+        
+        list.innerHTML = '';
+        
+        if (rowSections.length === 0) {
+            list.innerHTML = '<div style="padding: 20px; text-align: center; color: #888; font-size: 13px;">No row sections defined yet. Click "Add Row Section" to begin.</div>';
+            return;
+        }
+        
+        rowSections.forEach((section, index) => {
+            const div = document.createElement('div');
+            div.style.cssText = 'border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin-bottom: 10px; background: white;';
+            
+            const colSummary = section.columnSections && section.columnSections.length > 0 
+                ? `<br><span style="font-size: 11px; color: #6c757d;">${section.columnSections.length} column section(s)</span>`
+                : '';
+            
+            // Calculate collapsed rows
+            const rowsInSection = section.endRow - section.startRow + 1;
+            const collapsedRows = rowsInSection * section.repeatCount;
+            const lastRow = section.endRow + collapsedRows;
+            const collapsedInfo = collapsedRows > 0 
+                ? `<br><span style="font-size: 11px; color: #dc3545;">Uses rows up to ${lastRow} (${collapsedRows} rows collapsed)</span>`
+                : '';
+            
+            div.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div style="flex: 1;">
+                        <strong style="font-size: 14px;">Rows ${section.startRow}-${section.endRow}</strong> 
+                        <span style="color: #666; font-size: 13px;">(${rowsInSection} row(s), repeat ${section.repeatCount}x)</span>
+                        ${section.instructions ? `<br><span style="font-size: 12px; color: #555;">${section.instructions}</span>` : ''}
+                        ${collapsedInfo}
+                        ${colSummary}
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="edit-section-btn" data-index="${index}" style="background: #ffc107; color: #000; border: none; padding: 4px 10px; border-radius: 3px; cursor: pointer; font-size: 11px;">Edit</button>
+                        <button class="delete-section-btn" data-index="${index}" style="background: #dc3545; color: white; border: none; padding: 4px 10px; border-radius: 3px; cursor: pointer; font-size: 11px;">Delete</button>
+                    </div>
+                </div>
+            `;
+            
+            list.appendChild(div);
+        });
+        
+        // Add event listeners
+        list.querySelectorAll('.edit-section-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                editRowSection(index);
+            });
+        });
+        
+        list.querySelectorAll('.delete-section-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                if (confirm(`Delete row section ${rowSections[index].startRow}-${rowSections[index].endRow}?`)) {
+                    rowSections.splice(index, 1);
+                    renderRowSectionList();
+                    updateRowSectionsSummary();
+                    renderGrid(gridRows, gridCols);
+                }
+            });
+        });
+    }
+    
+    function openRowSectionManager() {
+        const modal = document.getElementById('rowSectionModal');
+        if (!modal) return;
+        
+        renderRowSectionList();
+        modal.style.display = 'block';
+    }
+    
+    function closeRowSectionManager() {
+        const modal = document.getElementById('rowSectionModal');
+        if (modal) modal.style.display = 'none';
+        
+        // Re-render grid with updated sections
+        if (gridRows > 0 && gridCols > 0) {
+            renderGrid(gridRows, gridCols);
+        }
+    }
+    
+    function openRowSectionEditor(editIndex = null) {
+        const modal = document.getElementById('rowSectionEditorModal');
+        const title = document.getElementById('rowSectionEditorTitle');
+        const startInput = document.getElementById('sectionStartRow');
+        const endInput = document.getElementById('sectionEndRow');
+        const repeatInput = document.getElementById('sectionRepeatCount');
+        const instructionsInput = document.getElementById('sectionInstructions');
+        const labelInput = document.getElementById('sectionLabel');
+        
+        if (!modal) return;
+        
+        currentEditingSectionIndex = editIndex;
+        
+        if (editIndex !== null && rowSections[editIndex]) {
+            // Editing existing section
+            const section = rowSections[editIndex];
+            title.textContent = 'Edit Row Section';
+            startInput.value = section.startRow;
+            endInput.value = section.endRow;
+            repeatInput.value = section.repeatCount;
+            instructionsInput.value = section.instructions || '';
+            labelInput.value = section.label || '';
+            currentEditingSubsections = section.rowSubsections ? [...section.rowSubsections] : [];
+            
+            startInput.max = gridRows;
+            endInput.max = gridRows;
+        } else {
+            // Adding new section - default to full range from bottom to top
+            title.textContent = 'Add Row Section';
+            startInput.value = 1;  // Bottom row (row 1)
+            endInput.value = gridRows || 1;  // Top row (highest row number)
+            repeatInput.value = 1;
+            instructionsInput.value = '';
+            labelInput.value = '';
+            currentEditingSubsections = [];
+            
+            startInput.max = gridRows;
+            endInput.max = gridRows;
+        }
+        
+        updateSectionRowCount();
+        updateRowSubsectionsSummary();
+        modal.style.display = 'block';
+    }
+    
+    function closeRowSectionEditor() {
+        const modal = document.getElementById('rowSectionEditorModal');
+        if (modal) modal.style.display = 'none';
+        currentEditingSectionIndex = null;
+        currentEditingSubsections = [];
+    }
+    
+    function editRowSection(index) {
+        openRowSectionEditor(index);
+    }
+    
+    function saveRowSection() {
+        const startInput = document.getElementById('sectionStartRow');
+        const endInput = document.getElementById('sectionEndRow');
+        const repeatInput = document.getElementById('sectionRepeatCount');
+        const instructionsInput = document.getElementById('sectionInstructions');
+        const labelInput = document.getElementById('sectionLabel');
+        
+        const startRow = parseInt(startInput.value);
+        const endRow = parseInt(endInput.value);
+        const repeatCount = parseInt(repeatInput.value);
+        const instructions = instructionsInput.value.trim();
+        const label = labelInput.value.trim();
+        
+        // Validation
+        if (isNaN(startRow) || isNaN(endRow) || isNaN(repeatCount)) {
+            alert('Please enter valid numbers for all fields');
+            return;
+        }
+        
+        if (startRow < 1 || endRow < 1 || startRow > gridRows || endRow > gridRows) {
+            alert(`Row numbers must be between 1 and ${gridRows}`);
+            return;
+        }
+        
+        if (startRow > endRow) {
+            alert('Start row must be less than or equal to end row');
+            return;
+        }
+        
+        if (repeatCount < 1) {
+            alert('Repeat count must be at least 1');
+            return;
+        }
+        
+        // Validate that there are enough rows to accommodate the repeats
+        const rowsInSection = endRow - startRow + 1;
+        const rowsToCollapse = rowsInSection * repeatCount;
+        const lastRowNeeded = endRow + rowsToCollapse;
+        
+        if (lastRowNeeded > gridRows) {
+            alert(`Not enough rows available. This section with ${rowsInSection} rows × ${repeatCount} repeats will collapse ${rowsToCollapse} subsequent rows (ending at row ${lastRowNeeded}), but only ${gridRows} total rows are available in the chart.`);
+            return;
+        }
+        
+        // Check for conflicts with other sections (including their collapsed rows)
+        for (let i = 0; i < rowSections.length; i++) {
+            // Skip if we're editing this section
+            if (currentEditingSectionIndex !== null && i === currentEditingSectionIndex) {
+                continue;
+            }
+            
+            const existingSection = rowSections[i];
+            const existingRowsInSection = existingSection.endRow - existingSection.startRow + 1;
+            const existingRowsToCollapse = existingRowsInSection * existingSection.repeatCount;
+            const existingLastRow = existingSection.endRow + existingRowsToCollapse;
+            
+            // Check if this section's range (including collapsed rows) overlaps with existing section's range (including collapsed rows)
+            const thisRangeStart = startRow;
+            const thisRangeEnd = lastRowNeeded;
+            const existingRangeStart = existingSection.startRow;
+            const existingRangeEnd = existingLastRow;
+            
+            if (!(thisRangeEnd < existingRangeStart || thisRangeStart > existingRangeEnd)) {
+                alert(`This section conflicts with existing section at rows ${existingSection.startRow}-${existingSection.endRow} (which uses rows up to ${existingLastRow} including ${existingSection.repeatCount} repeats). Please choose a different row range.`);
+                return;
+            }
+        }
+        
+        const section = {
+            id: currentEditingSectionIndex !== null ? rowSections[currentEditingSectionIndex].id : nextSectionId++,
+            startRow,
+            endRow,
+            repeatCount,
+            instructions,
+            label,
+            rowSubsections: currentEditingSubsections
+        };
+        
+        if (currentEditingSectionIndex !== null) {
+            // Update existing
+            rowSections[currentEditingSectionIndex] = section;
+        } else {
+            // Add new
+            rowSections.push(section);
+        }
+        
+        closeRowSectionEditor();
+        renderRowSectionList();
+        updateRowSectionsSummary();
+    }
+    
+    function updateSectionRowCount() {
+        const startInput = document.getElementById('sectionStartRow');
+        const endInput = document.getElementById('sectionEndRow');
+        const display = document.getElementById('sectionRowCount');
+        const repeatInput = document.getElementById('sectionRepeatCount');
+        const repeatDisplay = document.getElementById('sectionRepeatDisplay');
+        
+        if (startInput && endInput && display) {
+            const start = parseInt(startInput.value) || 0;
+            const end = parseInt(endInput.value) || 0;
+            const count = Math.max(0, end - start + 1);
+            display.textContent = count;
+        }
+        
+        if (repeatInput && repeatDisplay) {
+            const repeat = parseInt(repeatInput.value) || 1;
+            repeatDisplay.textContent = repeat;
+            
+            // Calculate and show collapsed rows
+            const start = parseInt(startInput.value) || 0;
+            const end = parseInt(endInput.value) || 0;
+            const rowsInSection = Math.max(0, end - start + 1);
+            const collapsedRows = rowsInSection * repeat;
+            
+            if (end > 0) {
+                const lastRow = end + collapsedRows;
+                repeatDisplay.textContent = `${repeat} (uses rows ${start}-${lastRow}, collapsing ${collapsedRows} rows)`;
+            }
+        }
+    }
+    
+    function updateRowSubsectionsSummary() {
+        const summary = document.getElementById('rowSubsectionsSummary');
+        if (!summary) return;
+        
+        if (currentEditingSubsections.length === 0) {
+            summary.textContent = 'No row sub-sections defined';
+            summary.style.color = '#666';
+        } else {
+            summary.textContent = `${currentEditingSubsections.length} row sub-section(s) defined`;
+            summary.style.color = '#28a745';
+        }
+    }
+    
+    function updateColumnSectionsSummary() {
+        const summary = document.getElementById('subsectionColumnsSummary');
+        if (!summary) return;
+        
+        if (currentEditingColSections.length === 0) {
+            summary.textContent = 'No column sections defined';
+            summary.style.color = '#666';
+        } else {
+            summary.textContent = `${currentEditingColSections.length} column section(s) defined`;
+            summary.style.color = '#17a2b8';
+        }
+    }
+    
+    // Row Subsection Management Functions
+    function openRowSubsectionManager() {
+        const modal = document.getElementById('rowSubsectionModal');
+        const rangeDisplay = document.getElementById('currentRowSectionRangeSubsec');
+        const startInput = document.getElementById('sectionStartRow');
+        const endInput = document.getElementById('sectionEndRow');
+        
+        if (!modal) return;
+        
+        const startRow = parseInt(startInput.value) || 1;
+        const endRow = parseInt(endInput.value) || 1;
+        rangeDisplay.textContent = `${startRow}-${endRow}`;
+        
+        renderRowSubsectionList();
+        modal.style.display = 'block';
+    }
+    
+    function closeRowSubsectionManager() {
+        const modal = document.getElementById('rowSubsectionModal');
+        if (modal) modal.style.display = 'none';
+        updateRowSubsectionsSummary();
+    }
+    
+    function renderRowSubsectionList() {
+        const list = document.getElementById('rowSubsectionList');
+        if (!list) return;
+        
+        list.innerHTML = '';
+        
+        if (currentEditingSubsections.length === 0) {
+            list.innerHTML = '<div style="padding: 15px; text-align: center; color: #888; font-size: 12px;">No row sub-sections defined yet.</div>';
+            return;
+        }
+        
+        currentEditingSubsections.forEach((subsection, index) => {
+            const div = document.createElement('div');
+            div.style.cssText = 'border: 1px solid #e0e0e0; border-radius: 3px; padding: 10px; margin-bottom: 10px; background: #f8f9fa;';
+            
+            const colSummary = subsection.columnSections && subsection.columnSections.length > 0 
+                ? `${subsection.columnSections.length} column section(s)` 
+                : 'No column sections';
+            
+            div.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <strong>Rows ${subsection.startRow}-${subsection.endRow}</strong> 
+                        <span style="color: #666; font-size: 12px;">(${subsection.endRow - subsection.startRow + 1} rows)</span>
+                        <br><span style="color: #17a2b8; font-size: 11px;">${colSummary}</span>
+                        ${subsection.instructions ? `<br><span style="color: #555; font-size: 11px;">${subsection.instructions}</span>` : ''}
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="edit-subsection-btn" data-index="${index}" style="background: #007bff; color: white; border: none; padding: 3px 10px; border-radius: 3px; cursor: pointer; font-size: 11px;">Edit</button>
+                        <button class="delete-subsection-btn" data-index="${index}" style="background: #dc3545; color: white; border: none; padding: 3px 10px; border-radius: 3px; cursor: pointer; font-size: 11px;">Delete</button>
+                    </div>
+                </div>
+            `;
+            
+            list.appendChild(div);
+        });
+        
+        // Add event listeners
+        list.querySelectorAll('.edit-subsection-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                openRowSubsectionEditor(index);
+            });
+        });
+        
+        list.querySelectorAll('.delete-subsection-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                currentEditingSubsections.splice(index, 1);
+                renderRowSubsectionList();
+                updateRowSubsectionsSummary();
+            });
+        });
+    }
+    
+    function openRowSubsectionEditor(editIndex = null) {
+        const modal = document.getElementById('rowSubsectionEditorModal');
+        const title = document.getElementById('rowSubsectionEditorTitle');
+        const startInput = document.getElementById('subsectionStartRow');
+        const endInput = document.getElementById('subsectionEndRow');
+        const instructionsInput = document.getElementById('subsectionInstructions');
+        const labelInput = document.getElementById('subsectionLabel');
+        
+        const parentStartRow = parseInt(document.getElementById('sectionStartRow').value) || 1;
+        const parentEndRow = parseInt(document.getElementById('sectionEndRow').value) || 1;
+        
+if (!modal) return;
+        
+        currentEditingSubsectionIndex = editIndex;
+        
+        if (editIndex !== null && currentEditingSubsections[editIndex]) {
+            // Editing existing subsection
+            const subsection = currentEditingSubsections[editIndex];
+            title.textContent = 'Edit Row Sub-section';
+            startInput.value = subsection.startRow;
+            endInput.value = subsection.endRow;
+            instructionsInput.value = subsection.instructions || '';
+            labelInput.value = subsection.label || '';
+            currentEditingColSections = subsection.columnSections ? [...subsection.columnSections] : [];
+            
+            startInput.min = parentStartRow;
+            endInput.min = parentStartRow;
+            startInput.max = parentEndRow;
+            endInput.max = parentEndRow;
+        } else {
+            // Adding new subsection
+            title.textContent = 'Add Row Sub-section';
+            startInput.value = parentStartRow;
+            endInput.value = parentEndRow;
+            instructionsInput.value = '';
+            labelInput.value = '';
+            currentEditingColSections = [];
+            
+            startInput.min = parentStartRow;
+            endInput.min = parentStartRow;
+            startInput.max = parentEndRow;
+            endInput.max = parentEndRow;
+        }
+        
+        updateSubsectionRowCount();
+        updateColumnSectionsSummary();
+        modal.style.display = 'block';
+    }
+    
+    function closeRowSubsectionEditor() {
+        const modal = document.getElementById('rowSubsectionEditorModal');
+        if (modal) modal.style.display = 'none';
+        currentEditingSubsectionIndex = null;
+        currentEditingColSections = [];
+    }
+    
+    function saveRowSubsection() {
+        const startInput = document.getElementById('subsectionStartRow');
+        const endInput = document.getElementById('subsectionEndRow');
+        const instructionsInput = document.getElementById('subsectionInstructions');
+        const labelInput = document.getElementById('subsectionLabel');
+        
+        const startRow = parseInt(startInput.value);
+        const endRow = parseInt(endInput.value);
+        const instructions = instructionsInput.value.trim();
+        const label = labelInput.value.trim();
+        
+        const parentStartRow = parseInt(document.getElementById('sectionStartRow').value) || 1;
+        const parentEndRow = parseInt(document.getElementById('sectionEndRow').value) || 1;
+        
+        // Validation
+        if (isNaN(startRow) || isNaN(endRow)) {
+            alert('Please enter valid numbers for all fields');
+            return;
+        }
+        
+        if (startRow < parentStartRow || endRow > parentEndRow) {
+            alert(`Row numbers must be between ${parentStartRow} and ${parentEndRow}`);
+            return;
+        }
+        
+        if (startRow > endRow) {
+            alert('Start row must be less than or equal to end row');
+            return;
+        }
+        
+        const subsection = {
+            id: currentEditingSubsectionIndex !== null ? currentEditingSubsections[currentEditingSubsectionIndex].id : nextSubsectionId++,
+            startRow,
+            endRow,
+            instructions,
+            label,
+            columnSections: currentEditingColSections
+        };
+        
+        if (currentEditingSubsectionIndex !== null) {
+            // Update existing
+            currentEditingSubsections[currentEditingSubsectionIndex] = subsection;
+        } else {
+            // Add new
+            currentEditingSubsections.push(subsection);
+        }
+        
+        closeRowSubsectionEditor();
+        renderRowSubsectionList();
+        updateRowSubsectionsSummary();
+    }
+    
+    function updateSubsectionRowCount() {
+        const startInput = document.getElementById('subsectionStartRow');
+        const endInput = document.getElementById('subsectionEndRow');
+        const display = document.getElementById('subsectionRowCount');
+        
+        if (startInput && endInput && display) {
+            const start = parseInt(startInput.value) || 0;
+            const end = parseInt(endInput.value) || 0;
+            const count = Math.max(0, end - start + 1);
+            display.textContent = count;
+        }
+    }
+    
+    // Column Section Management Functions (for subsections)
+    function openColumnSectionManager() {
+        const modal = document.getElementById('columnSectionModal');
+        const rangeDisplay = document.getElementById('currentRowSubsectionRange');
+        const startInput = document.getElementById('subsectionStartRow');
+        const endInput = document.getElementById('subsectionEndRow');
+        
+        // Column inputs
+        const colStartInput = document.getElementById('colSectionStartCol');
+        const colEndInput = document.getElementById('colSectionEndCol');
+        const colRepeatInput = document.getElementById('colSectionRepeatCount');
+        const colInstructionsInput = document.getElementById('colSectionInstructions');
+        
+        if (!modal) return;
+        
+        const startRow = parseInt(startInput.value) || 1;
+        const endRow = parseInt(endInput.value) || 1;
+        rangeDisplay.textContent = `${startRow}-${endRow}`;
+        
+        // Set default column values for right-to-left reading (col 1 is right, higher cols are left)
+        colStartInput.value = 1;  // Right column (lowest number)
+        colEndInput.value = gridCols || 1;  // Left column (highest number)
+        colRepeatInput.value = 1;
+        colInstructionsInput.value = '';
+        
+        renderColumnSectionList();
+        modal.style.display = 'block';
+    }
+    
+    function closeColumnSectionManager() {
+        const modal = document.getElementById('columnSectionModal');
+        const addButton = document.getElementById('addColumnSectionBtn');
+        
+        if (modal) modal.style.display = 'none';
+        
+        // Reset editing state
+        currentEditingColSectionIndex = null;
+        if (addButton) {
+            addButton.textContent = 'Add Column Section';
+        }
+        
+        updateColumnSectionsSummary();
+    }
+    
+    function renderColumnSectionList() {
+        const list = document.getElementById('columnSectionList');
+        if (!list) return;
+        
+        list.innerHTML = '';
+        
+        if (currentEditingColSections.length === 0) {
+            list.innerHTML = '<div style="padding: 15px; text-align: center; color: #888; font-size: 12px;">No column sections defined yet.</div>';
+            return;
+        }
+        
+        currentEditingColSections.forEach((colSection, index) => {
+            const div = document.createElement('div');
+            div.style.cssText = 'border: 1px solid #e0e0e0; border-radius: 3px; padding: 8px; margin-bottom: 8px; background: #f8f9fa; font-size: 12px;';
+            
+            div.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <strong>Cols ${colSection.startCol}-${colSection.endCol}</strong> 
+                        <span style="color: #666;">(${colSection.endCol - colSection.startCol + 1} cols, repeat ${colSection.repeatCount}x)</span>
+                        ${colSection.instructions ? `<br><span style="color: #555; font-size: 11px;">${colSection.instructions}</span>` : ''}
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="edit-col-section-btn" data-index="${index}" style="background: #ffc107; color: #000; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 10px;">Edit</button>
+                        <button class="delete-col-section-btn" data-index="${index}" style="background: #dc3545; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 10px;">Delete</button>
+                    </div>
+                </div>
+            `;
+            
+            list.appendChild(div);
+        });
+        
+        // Add event listeners
+        list.querySelectorAll('.edit-col-section-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                editColumnSection(index);
+            });
+        });
+        
+        list.querySelectorAll('.delete-col-section-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                currentEditingColSections.splice(index, 1);
+                renderColumnSectionList();
+                updateColumnSectionsSummary();
+            });
+        });
+    }
+    
+    function editColumnSection(index) {
+        const colSection = currentEditingColSections[index];
+        if (!colSection) return;
+        
+        currentEditingColSectionIndex = index;
+        
+        const startInput = document.getElementById('colSectionStartCol');
+        const endInput = document.getElementById('colSectionEndCol');
+        const repeatInput = document.getElementById('colSectionRepeatCount');
+        const instructionsInput = document.getElementById('colSectionInstructions');
+        const addButton = document.getElementById('addColumnSectionBtn');
+        
+        startInput.value = colSection.startCol;
+        endInput.value = colSection.endCol;
+        repeatInput.value = colSection.repeatCount;
+        instructionsInput.value = colSection.instructions || '';
+        
+        if (addButton) {
+            addButton.textContent = 'Update Column Section';
+        }
+        
+        updateColumnRepeatDisplay();
+    }
+    
+    function addColumnSection() {
+        const startInput = document.getElementById('colSectionStartCol');
+        const endInput = document.getElementById('colSectionEndCol');
+        const repeatInput = document.getElementById('colSectionRepeatCount');
+        const instructionsInput = document.getElementById('colSectionInstructions');
+        const addButton = document.getElementById('addColumnSectionBtn');
+        
+        const startCol = parseInt(startInput.value);
+        const endCol = parseInt(endInput.value);
+        const repeatCount = parseInt(repeatInput.value);
+        const instructions = instructionsInput.value.trim();
+        
+        // Validation
+        if (isNaN(startCol) || isNaN(endCol) || isNaN(repeatCount)) {
+            alert('Please enter valid numbers');
+            return;
+        }
+        
+        if (startCol < 1 || endCol < 1 || startCol > gridCols || endCol > gridCols) {
+            alert(`Column numbers must be between 1 and ${gridCols}`);
+            return;
+        }
+        
+        if (startCol > endCol) {
+            alert('Start column must be less than or equal to end column');
+            return;
+        }
+        
+        if (repeatCount < 1) {
+            alert('Repeat count must be at least 1');
+            return;
+        }
+        
+        if (currentEditingColSectionIndex !== null) {
+            // Update existing column section
+            currentEditingColSections[currentEditingColSectionIndex] = {
+                startCol,
+                endCol,
+                repeatCount,
+                instructions
+            };
+            currentEditingColSectionIndex = null;
+            if (addButton) {
+                addButton.textContent = 'Add Column Section';
+            }
+        } else {
+            // Add new column section
+            currentEditingColSections.push({
+                startCol,
+                endCol,
+                repeatCount,
+                instructions
+            });
+        }
+        
+        // Reset inputs to defaults (col 1 is right, higher cols are left)
+        startInput.value = 1;  // Right column (lowest number)
+        endInput.value = gridCols || 1;  // Left column (highest number)
+        repeatInput.value = 1;
+        instructionsInput.value = '';
+        
+        // Reset button text
+        if (addButton) {
+            addButton.textContent = 'Add Column Section';
+        }
+        
+        renderColumnSectionList();
+        updateColumnSectionsSummary();
+        updateColSectionColCount();
+    }
+    
+    function updateColSectionColCount() {
+        const startInput = document.getElementById('colSectionStartCol');
+        const endInput = document.getElementById('colSectionEndCol');
+        const display = document.getElementById('colSectionColCount');
+        
+        if (startInput && endInput && display) {
+            const start = parseInt(startInput.value) || 0;
+            const end = parseInt(endInput.value) || 0;
+            const count = start > 0 && end > 0 ? Math.max(0, end - start + 1) : 0;
+            display.textContent = count;
+        }
+    }
+    
+    // ======================
+    // SUBSECTION GRID FUNCTIONS (Visual Column Selection)
+    // ======================
+    
+    function openSubsectionGrid() {
+        // Update breadcrumb
+        const breadcrumb = document.getElementById('subsectionGridBreadcrumb');
+        const section = rowSections[currentEditingSectionIndex];
+        const subsection = currentEditingSubsections[currentEditingSubsectionIndex];
+        
+        if (breadcrumb && section && subsection) {
+            breadcrumb.textContent = `Section ${section.startRow}-${section.endRow} → Subsection ${subsection.startRow}-${subsection.endRow}`;
+        }
+        
+        // Store subsection reference
+        currentSubsectionForGrid = subsection;
+        subsectionGridStartRow = subsection.startRow;
+        subsectionGridEndRow = subsection.endRow;
+        
+        // Initialize column sections for this subsection
+        currentEditingColSections = [...(subsection.columnSections || [])];
+        
+        // Reset selection
+        clearColumnSelection();
+        
+        // Render the subsection grid
+        renderSubsectionGrid();
+        
+        // Show existing column sections
+        renderSubsectionColumnSections();
+        
+        // Show modal
+        const modal = document.getElementById('subsectionGridModal');
+        if (modal) {
+            modal.style.display = 'block';
+            subsectionGridActive = true;
+        }
+    }
+    
+    function closeSubsectionGrid() {
+        const modal = document.getElementById('subsectionGridModal');
+        if (modal) modal.style.display = 'none';
+        subsectionGridActive = false;
+        
+        // Save column sections back to the subsection
+        if (currentSubsectionForGrid) {
+            currentSubsectionForGrid.columnSections = [...currentEditingColSections];
+        }
+        
+        // Update summary in subsection editor
+        updateColumnSectionsSummary();
+        
+        // Clear state
+        currentSubsectionForGrid = null;
+        columnSelectionStart = null;
+        columnSelectionEnd = null;
+    }
+    
+    function renderSubsectionGrid() {
+        const container = document.getElementById('subsectionGridContainer');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        const rows = subsectionGridEndRow - subsectionGridStartRow + 1;
+        const cols = gridCols; // Use full chart column count
+        
+        const table = document.createElement('table');
+        table.style.cssText = 'border-collapse: collapse; margin: 0 auto;';
+        
+        // Header row with column numbers
+        const headerRow = document.createElement('tr');
+        const cornerCell = document.createElement('th');
+        cornerCell.style.cssText = 'border: 1px solid #dee2e6; padding: 8px; background: #f8f9fa; font-size: 11px; min-width: 40px;';
+        headerRow.appendChild(cornerCell);
+        
+        // Column headers (right to left for knitting)
+        for (let col = cols; col >= 1; col--) {
+            const th = document.createElement('th');
+            th.textContent = col;
+            th.className = 'subsection-grid-col-header';
+            th.dataset.col = col;
+            th.style.cssText = 'border: 1px solid #dee2e6; padding: 8px; background: #e3f2fd; font-size: 11px; min-width: 35px; cursor: pointer; user-select: none;';
+            
+            // Click to start selection
+            th.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                startColumnSelection(col);
+            });
+            
+            th.addEventListener('mouseenter', function() {
+                if (isSelectingColumns) {
+                    updateColumnSelection(col);
+                }
+            });
+            
+            th.addEventListener('mouseup', function() {
+                endColumnSelection();
+            });
+            
+            headerRow.appendChild(th);
+        }
+        table.appendChild(headerRow);
+        
+        // Data rows (bottom to top)
+        for (let row = subsectionGridEndRow; row >= subsectionGridStartRow; row--) {
+            const tr = document.createElement('tr');
+            
+            // Row header
+            const rowHeader = document.createElement('th');
+            rowHeader.textContent = row;
+            rowHeader.style.cssText = 'border: 1px solid #dee2e6; padding: 8px; background: #fff3cd; font-size: 11px; font-weight: bold;';
+            tr.appendChild(rowHeader);
+            
+            // Data cells (right to left)
+            for (let col = cols; col >= 1; col--) {
+                const td = document.createElement('td');
+                td.style.cssText = 'border: 1px solid #dee2e6; padding: 8px; min-width: 35px; min-height: 35px; background: white;';
+                td.dataset.row = row;
+                td.dataset.col = col;
+                
+                // Check if this column is in a column section
+                const colSection = currentEditingColSections.find(cs => col >= cs.startCol && col <= cs.endCol);
+                if (colSection) {
+                    td.style.backgroundColor = '#c8e6c9'; // Light green for column sections
+                    if (col === colSection.startCol) {
+                        td.style.borderLeft = '3px solid #28a745';
+                    }
+                }
+                
+                tr.appendChild(td);
+            }
+            
+            table.appendChild(tr);
+        }
+        
+        container.appendChild(table);
+        
+        // Add mouseup listener to document to end selection
+        document.addEventListener('mouseup', endColumnSelection);
+    }
+    
+    function startColumnSelection(col) {
+        isSelectingColumns = true;
+        columnSelectionStart = col;
+        columnSelectionEnd = col;
+        updateSelectionDisplay();
+        highlightSelectedColumns();
+    }
+    
+    function updateColumnSelection(col) {
+        columnSelectionEnd = col;
+        updateSelectionDisplay();
+        highlightSelectedColumns();
+    }
+    
+    function endColumnSelection() {
+        if (isSelectingColumns) {
+            isSelectingColumns = false;
+            // Keep the selection but enable the button
+            const btn = document.getElementById('createColumnSectionBtn');
+            if (btn && columnSelectionStart !== null && columnSelectionEnd !== null) {
+                btn.disabled = false;
+            }
+        }
+    }
+    
+    function clearColumnSelection() {
+        columnSelectionStart = null;
+        columnSelectionEnd = null;
+        isSelectingColumns = false;
+        currentEditingGridColSectionIndex = null;
+        
+        document.getElementById('gridColStart').value = '';
+        document.getElementById('gridColEnd').value = '';
+        document.getElementById('gridColCount').textContent = '0';
+        document.getElementById('gridRepeatCount').value = '1';
+        document.getElementById('gridColInstructions').value = '';
+        document.getElementById('gridColRepeatDisplay').textContent = '';
+        
+        const btn = document.getElementById('createColumnSectionBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Create Column Section';
+        }
+        
+        highlightSelectedColumns();
+    }
+    
+    function updateSelectionDisplay() {
+        if (columnSelectionStart === null || columnSelectionEnd === null) return;
+        
+        const start = Math.min(columnSelectionStart, columnSelectionEnd);
+        const end = Math.max(columnSelectionStart, columnSelectionEnd);
+        const count = end - start + 1;
+        
+        document.getElementById('gridColStart').value = start;
+        document.getElementById('gridColEnd').value = end;
+        document.getElementById('gridColCount').textContent = count;
+        updateColumnRepeatDisplay();
+    }
+    
+    function updateColumnRepeatDisplay() {
+        const startInput = document.getElementById('gridColStart');
+        const endInput = document.getElementById('gridColEnd');
+        const repeatInput = document.getElementById('gridRepeatCount');
+        const display = document.getElementById('gridColRepeatDisplay');
+        
+        if (!display || !startInput.value || !endInput.value) {
+            if (display) display.textContent = '';
+            return;
+        }
+        
+        const start = parseInt(startInput.value);
+        const end = parseInt(endInput.value);
+        const repeat = parseInt(repeatInput.value) || 1;
+        const colsInSection = end - start + 1;
+        
+        const collapsedCols = colsInSection * repeat;
+        const lastCol = end + collapsedCols;
+        display.textContent = `(uses cols ${start}-${lastCol}, collapsing ${collapsedCols} cols)`;
+    }
+    
+    function highlightSelectedColumns() {
+        // Remove previous highlights
+        document.querySelectorAll('.subsection-grid-col-header').forEach(th => {
+            th.style.background = '#e3f2fd';
+        });
+        
+        if (columnSelectionStart !== null && columnSelectionEnd !== null) {
+            const start = Math.min(columnSelectionStart, columnSelectionEnd);
+            const end = Math.max(columnSelectionStart, columnSelectionEnd);
+            
+            document.querySelectorAll('.subsection-grid-col-header').forEach(th => {
+                const col = parseInt(th.dataset.col);
+                if (col >= start && col <= end) {
+                    th.style.background = '#ffd54f'; // Yellow highlight
+                }
+            });
+        }
+    }
+    
+    function createColumnSectionFromGrid() {
+        if (columnSelectionStart === null || columnSelectionEnd === null) {
+            alert('Please select columns first.');
+            return;
+        }
+        
+        const start = Math.min(columnSelectionStart, columnSelectionEnd);
+        const end = Math.max(columnSelectionStart, columnSelectionEnd);
+        const repeatCount = parseInt(document.getElementById('gridRepeatCount').value) || 1;
+        const instructions = document.getElementById('gridColInstructions').value.trim();
+        
+        // Validate column availability
+        const colsInSection = end - start + 1;
+        const collapsedCols = colsInSection * repeatCount;
+        const lastColNeeded = end + collapsedCols;
+        
+        if (lastColNeeded > gridCols) {
+            alert(`Not enough columns available. This section with ${colsInSection} columns × ${repeatCount} repeats will collapse ${collapsedCols} subsequent columns (ending at column ${lastColNeeded}), but only ${gridCols} total columns are available in the chart.`);
+            return;
+        }
+        
+        // Check for conflicts with existing column sections (including collapsed columns)
+        for (const existingSection of currentEditingColSections) {
+            const existingColsInSection = existingSection.endCol - existingSection.startCol + 1;
+            const existingCollapsedCols = existingColsInSection * existingSection.repeatCount;
+            const existingLastCol = existingSection.endCol + existingCollapsedCols;
+            
+            // Check if ranges overlap
+            const rangeOverlap = (start <= existingLastCol && lastColNeeded >= existingSection.startCol);
+            
+            if (rangeOverlap) {
+                alert(`This section conflicts with existing column section at columns ${existingSection.startCol}-${existingSection.endCol} (which uses columns up to ${existingLastCol} including ${existingSection.repeatCount} repeats).\n\nRequested range: ${start}-${lastColNeeded}\nExisting range: ${existingSection.startCol}-${existingLastCol}`);
+                return;
+            }
+        }
+        
+        // Check for overlap with existing sections (visual overlap check)
+        const overlap = currentEditingColSections.some(cs => {
+            return (start >= cs.startCol && start <= cs.endCol) || 
+                   (end >= cs.startCol && end <= cs.endCol) ||
+                   (start <= cs.startCol && end >= cs.endCol);
+        });
+        
+        if (overlap) {
+            if (!confirm('This overlaps with an existing column section. Continue anyway?')) {
+                return;
+            }
+        }
+        
+        // Add the column section
+        if (currentEditingGridColSectionIndex !== null) {
+            // Update existing column section
+            currentEditingColSections[currentEditingGridColSectionIndex] = {
+                startCol: start,
+                endCol: end,
+                repeatCount: repeatCount,
+                instructions: instructions
+            };
+            currentEditingGridColSectionIndex = null;
+        } else {
+            // Add new column section
+            currentEditingColSections.push({
+                startCol: start,
+                endCol: end,
+                repeatCount: repeatCount,
+                instructions: instructions
+            });
+        }
+        
+        // Re-render everything
+        renderSubsectionColumnSections();
+        renderSubsectionGrid();
+        clearColumnSelection();
+    }
+    
+    function editGridColumnSection(index) {
+        const colSection = currentEditingColSections[index];
+        if (!colSection) return;
+        
+        currentEditingGridColSectionIndex = index;
+        
+        // Set the column selection
+        columnSelectionStart = colSection.startCol;
+        columnSelectionEnd = colSection.endCol;
+        
+        // Populate the repeat count and instructions
+        const repeatInput = document.getElementById('gridRepeatCount');
+        const instructionsInput = document.getElementById('gridColInstructions');
+        
+        if (repeatInput) repeatInput.value = colSection.repeatCount;
+        if (instructionsInput) instructionsInput.value = colSection.instructions || '';
+        
+        // Highlight the selected columns
+        highlightSelectedColumns();
+        
+        // Enable the create button
+        const createBtn = document.getElementById('createColumnSectionBtn');
+        if (createBtn) {
+            createBtn.disabled = false;
+            createBtn.textContent = 'Update Column Section';
+        }
+        
+        updateColumnRepeatDisplay();
+    }
+    
+    function renderSubsectionColumnSections() {
+        const list = document.getElementById('subsectionColumnSectionsList');
+        if (!list) return;
+        
+        list.innerHTML = '';
+        
+        if (currentEditingColSections.length === 0) {
+            list.innerHTML = '<div style="padding: 10px; text-align: center; color: #888; font-size: 12px; background: #f8f9fa; border-radius: 4px;">No column sections defined yet. Click and drag on column headers above to select a range.</div>';
+            return;
+        }
+        
+        const title = document.createElement('h5');
+        title.textContent = 'Defined Column Sections:';
+        title.style.cssText = 'margin: 0 0 10px 0; font-size: 13px; font-weight: bold;';
+        list.appendChild(title);
+        
+        currentEditingColSections.forEach((colSection, index) => {
+            const div = document.createElement('div');
+            div.style.cssText = 'border: 1px solid #28a745; border-radius: 4px; padding: 10px; margin-bottom: 8px; background: #e8f5e9; font-size: 12px;';
+            
+            // Calculate collapsed columns
+            const colsInSection = colSection.endCol - colSection.startCol + 1;
+            const collapsedCols = colsInSection * colSection.repeatCount;
+            const lastCol = colSection.endCol + collapsedCols;
+            const collapsedInfo = collapsedCols > 0 
+                ? `<br><span style="font-size: 11px; color: #dc3545;">Uses columns up to ${lastCol} (${collapsedCols} columns collapsed)</span>`
+                : '';
+            
+            div.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <strong>Columns ${colSection.startCol} to ${colSection.endCol}</strong> 
+                        <span style="color: #555;">(${colsInSection} columns, repeat ${colSection.repeatCount}x)</span>
+                        ${colSection.instructions ? `<br><span style="color: #333; font-style: italic;">${colSection.instructions}</span>` : ''}
+                        ${collapsedInfo}
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="edit-grid-col-section-btn" data-index="${index}" style="background: #ffc107; color: #000; border: none; padding: 4px 10px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">Edit</button>
+                        <button class="delete-grid-col-section-btn" data-index="${index}" style="background: #dc3545; color: white; border: none; padding: 4px 10px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">Delete</button>
+                    </div>
+                </div>
+            `;
+            
+            list.appendChild(div);
+        });
+        
+        // Add event listeners
+        list.querySelectorAll('.edit-grid-col-section-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                editGridColumnSection(index);
+            });
+        });
+        
+        list.querySelectorAll('.delete-grid-col-section-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                if (confirm('Delete this column section?')) {
+                    currentEditingColSections.splice(index, 1);
+                    renderSubsectionColumnSections();
+                    renderSubsectionGrid();
+                }
+            });
+        });
+    }
+    
+    // Chart name generation function
+    function generateChartName() {
+        if (!nameInput || !pieceSelect) return;
+        
+        const selectedPieceId = parseInt(pieceSelect.value);
+        const selectedPieceText = pieceSelect.options[pieceSelect.selectedIndex]?.text || '';
+        const selectedAgeText = ageSelect.options[ageSelect.selectedIndex]?.text || '';
+        const selectedSizeText = sizeSelect.options[sizeSelect.selectedIndex]?.text || '';
+        const selectedGenderText = genderSelect.options[genderSelect.selectedIndex]?.text || '';
+        
+        if (!selectedPieceId || selectedPieceText === 'Select Piece') {
+            nameInput.value = '';
+            syncChartNameDisplay();
+            return;
+        }
+        
+        const isHuman = pieceData[selectedPieceId] || false;
+        
+        let chartName;
+        
+        if (isHuman && ageSelect.value && selectedAgeText !== 'Select Age') {
+            const isAdult = selectedAgeText.toLowerCase().includes('adult');
+            
+            if (isAdult) {
+                const genderPart = (genderSelect.value && selectedGenderText !== 'Select Gender') ? selectedGenderText : 'NA';
+                const sizePart = (sizeSelect.value && selectedSizeText !== 'Select Size') ? selectedSizeText : 'NA';
+                chartName = `${selectedPieceText} - ${selectedAgeText} - ${genderPart} - ${sizePart}`;
+            } else {
+                chartName = `${selectedPieceText} - ${selectedAgeText} - NA`;
+            }
+        } else if (!isHuman) {
+            chartName = selectedPieceText;
+        }
+        
+        if (chartName) {
+            nameInput.value = chartName;
+            syncChartNameDisplay();
+            console.log('Chart name generated:', chartName);
+        }
+    }
+    
+    // Calculate dimensions using DMN rules
+    async function calculateDimensions() {
+        if (!calculationStatus) return { rows: 0, stitches: 0 };
+        
+        const selectedPieceId = parseInt(pieceSelect.value);
+        const selectedAgeId = parseInt(ageSelect.value);
+        const selectedSizeId = parseInt(sizeSelect.value) || 0;
+        const selectedGenderId = parseInt(genderSelect.value) || 0;
+        const patternIdInput = document.querySelector('input[name="pattern_id"]');
+        const patternId = parseInt(patternIdInput?.value, 10) || 0;
+        
+        if (!selectedPieceId || !selectedAgeId) {
+            calculationStatus.textContent = 'Missing required fields (piece, age)';
+            rowsCalculation.textContent = '...';
+            stitchesCalculation.textContent = '...';
+            if (finalResult) finalResult.textContent = 'Complete selection to see calculation';
+            return { rows: 0, stitches: 0 };
+        }
+        
+        // Check if adult piece needs size/gender
+        const isHuman = pieceData[selectedPieceId] || false;
+        if (isHuman) {
+            const ageName = ageSelect.options[ageSelect.selectedIndex]?.text || '';
+            const isAdult = ageName.toLowerCase().includes('adult');
+            
+            if (isAdult && (!selectedSizeId || !selectedGenderId)) {
+                calculationStatus.textContent = 'Adult piece requires size and gender selection';
+                rowsCalculation.textContent = '...';
+                stitchesCalculation.textContent = '...';
+                if (finalResult) finalResult.textContent = 'Complete selection to see calculation';
+                return { rows: 0, stitches: 0 };
+            }
+        }
+        
+        try {
+            calculationStatus.textContent = 'Calculating...';
+            rowsCalculation.textContent = 'calculating...';
+            stitchesCalculation.textContent = 'calculating...';
+            if (finalResult) finalResult.textContent = 'Processing...';
+            
+            const response = await fetch('{{ url_for("api_calculate_chart_dimensions") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    piece_id: selectedPieceId,
+                    age_id: selectedAgeId,
+                    size_id: selectedSizeId,
+                    gender_id: selectedGenderId,
+                    pattern_id: patternId
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Extract gauge values from calculation_info
+                // format: "Piece: X, Body Part: Y, Measurement: Z, Pattern Gauge: 20r/16s per 4"
+                const gaugeMatch = data.calculation_info?.match(/Pattern Gauge: ([\d.]+)r\/([\d.]+)s/);
+                const measurementMatch = data.calculation_info?.match(/Measurement: ([\d.]+)/);
+                const gauge = gaugeMatch
+                    ? { rows: gaugeMatch[1], stitches: gaugeMatch[2], measurement: measurementMatch?.[1] || '?' }
+                    : null;
+
+                // Populate input summary
+                const calcPiece = document.getElementById('calc-piece');
+                const calcBodyPart = document.getElementById('calc-body-part');
+                const calcMeasurement = document.getElementById('calc-measurement');
+                const calcGauge = document.getElementById('calc-gauge');
+                if (calcPiece) calcPiece.textContent = data.calculation_info?.match(/Piece: ([^,]+)/)?.[1] || '—';
+                if (calcBodyPart) calcBodyPart.textContent = data.body_part || '—';
+                if (calcMeasurement) calcMeasurement.textContent = gauge?.measurement ? `${gauge.measurement}"` : '—';
+                if (calcGauge) calcGauge.textContent = gauge ? `${gauge.rows}r / ${gauge.stitches}s` : '—';
+
+                if (gauge) {
+                    rowsCalculation.textContent = `(${gauge.stitches} ÷ 4) × (4.2 × 2.75) = ${data.num_rows}`;
+                    stitchesCalculation.textContent = `(${gauge.rows} ÷ 4) × ((${gauge.measurement} ÷ 3.2) × 3.14) = ${data.num_stitches}`;
+                } else {
+                    rowsCalculation.textContent = `${data.num_rows} rows`;
+                    stitchesCalculation.textContent = `${data.num_stitches} stitches`;
+                }
+
+                calculationStatus.textContent = `DMN: ${data.dimension_source || 'ok'}`;
+                return { rows: data.num_rows, stitches: data.num_stitches };
+            } else {
+                calculationStatus.textContent = `✗ ${data.error}`;
+                rowsCalculation.textContent = 'error';
+                stitchesCalculation.textContent = 'error';
+                return { rows: 0, stitches: 0 };
+            }
+        } catch (error) {
+            calculationStatus.textContent = `✗ API Error: ${error.message}`;
+            rowsCalculation.textContent = 'error';
+            stitchesCalculation.textContent = 'error';
+            if (finalResult) finalResult.textContent = 'Connection error';
+            console.error('DMN API Error:', error);
+            return { rows: 0, stitches: 0 };
+        }
+    }
+    
+    // Check if all required inputs are selected
+    function checkInputsAndShowExplanation() {
+        const selectedPieceId = parseInt(pieceSelect.value);
+        const selectedAgeId = parseInt(ageSelect.value);
+        const selectedSizeId = parseInt(sizeSelect.value) || 0;
+        const selectedGenderId = parseInt(genderSelect.value) || 0;
+        
+        // Check if basic required fields are selected
+        if (!selectedPieceId || !selectedAgeId) {
+            if (calculationExplanation) {
+                calculationExplanation.style.display = 'none';
+            }
+            return false;
+        }
+        
+        // Check if adult piece needs size/gender
+        const isHuman = pieceData[selectedPieceId] || false;
+        if (isHuman) {
+            const ageName = ageSelect.options[ageSelect.selectedIndex]?.text || '';
+            const isAdult = ageName.toLowerCase().includes('adult');
+            
+            if (isAdult && (!selectedSizeId || !selectedGenderId)) {
+                if (calculationExplanation) {
+                    calculationExplanation.style.display = 'none';
+                }
+                return false;
+            }
+        }
+        
+        // All required inputs are selected, show explanation
+        if (calculationExplanation) {
+            calculationExplanation.style.display = 'block';
+        }
+        return true;
+    }
+    
+    // Update dimensions function
+    async function updateDimensions() {
+        // Don't update dimensions if modal is open - it would destroy the grid
+        if (modalIsOpen) {
+            console.log('Skipping updateDimensions - modal is open');
+            return;
+        }
+        
+        // In edit mode, use saved chart dimensions — never re-run the DMN calculation
+        if (editMode) {
+            const rows = parseInt(numRowsInput.value) || 0;
+            const stitches = parseInt(numColsInput.value) || 0;
+            if (rows > 0 && stitches > 0) {
+                numRowsInput.disabled = false;
+                numColsInput.disabled = false;
+                const gridContainer = document.getElementById('chart-grid-container');
+                const gridMessage = document.getElementById('grid-message');
+                if (gridContainer) {
+                    gridContainer.style.display = 'inline-block';
+                    renderGrid(rows, stitches);
+                }
+                if (gridMessage) gridMessage.style.display = 'none';
+                if (submitBtn) submitBtn.disabled = false;
+                console.log('Edit mode: using saved chart dimensions', { rows, stitches });
+            }
+            return;
+        }
+        
+        // First check if all inputs are selected
+        if (!checkInputsAndShowExplanation()) {
+            return;
+        }
+        
+        const { rows, stitches } = await calculateDimensions();
+        
+        if (rows > 0 && stitches > 0) {
+            numColsInput.disabled = false;
+            numRowsInput.disabled = false;
+            numColsInput.value = stitches;
+            numRowsInput.value = rows;
+            
+            // Show grid
+            const gridContainer = document.getElementById('chart-grid-container');
+            const gridMessage = document.getElementById('grid-message');
+            if (gridContainer) {
+                gridContainer.style.display = 'inline-block';
+                renderGrid(rows, stitches);
+            }
+            if (gridMessage) gridMessage.style.display = 'none';
+            
+            if (submitBtn) submitBtn.disabled = false;
+            
+            console.log('Dimensions set from DMN:', { rows: rows, stitches: stitches });
+        } else {
+            numColsInput.disabled = true;
+            numRowsInput.disabled = true;
+            numColsInput.value = 0;
+            numRowsInput.value = 0;
+            
+            const gridContainer = document.getElementById('chart-grid-container');
+            const gridMessage = document.getElementById('grid-message');
+            if (gridContainer) gridContainer.style.display = 'none';
+            if (gridMessage) gridMessage.style.display = 'block';
+            
+            const gridDisplay = document.getElementById('grid-size-display');
+            if (gridDisplay) gridDisplay.textContent = 'Grid: 0x0 - Select piece, age, size, and gender to calculate dimensions';
+            
+            // Hide calculation explanation when no valid calculation
+            if (calculationExplanation) {
+                calculationExplanation.style.display = 'none';
+            }
+            
+            if (submitBtn) submitBtn.disabled = true;
+            
+            console.log('Dimensions reset to 0');
+        }
+    }
+    
+    // Field toggling functions
+    function toggleHumanFields() {
+        const selectedPieceId = parseInt(pieceSelect.value);
+        const isHuman = pieceData[selectedPieceId] || false;
+        
+        if (isHuman) {
+            ageSelect.disabled = false;
+            ageSelect.required = true;
+            ageSelect.style.backgroundColor = '';
+            toggleSizeField();
+            toggleGenderField();
+        } else {
+            ageSelect.disabled = true;
+            sizeSelect.disabled = true;
+            genderSelect.disabled = true;
+            ageSelect.required = false;
+            sizeSelect.required = false;
+            genderSelect.required = false;
+            ageSelect.value = '';
+            sizeSelect.value = '';
+            genderSelect.value = '';
+            ageSelect.style.backgroundColor = '#f5f5f5';
+            sizeSelect.style.backgroundColor = '#f5f5f5';
+            genderSelect.style.backgroundColor = '#f5f5f5';
+        }
+        
+        generateChartName();
+        updateDimensions();
+    }
+    
+    function toggleSizeField() {
+        const selectedPieceId = parseInt(pieceSelect.value);
+        const isHuman = pieceData[selectedPieceId] || false;
+        const ageName = ageSelect.options[ageSelect.selectedIndex]?.text || '';
+        const isAdult = ageName.toLowerCase().includes('adult');
+        
+        if (isHuman && ageSelect.value && isAdult) {
+            sizeSelect.disabled = false;
+            sizeSelect.required = true;
+            sizeSelect.style.backgroundColor = '';
+        } else {
+            sizeSelect.disabled = true;
+            sizeSelect.required = false;
+            sizeSelect.value = '';
+            sizeSelect.style.backgroundColor = '#f5f5f5';
+        }
+        
+        generateChartName();
+        updateDimensions();
+    }
+    
+    function toggleGenderField() {
+        const selectedPieceId = parseInt(pieceSelect.value);
+        const isHuman = pieceData[selectedPieceId] || false;
+        const ageName = ageSelect.options[ageSelect.selectedIndex]?.text || '';
+        const isAdult = ageName.toLowerCase().includes('adult');
+        
+        if (isHuman && ageSelect.value && isAdult) {
+            genderSelect.disabled = false;
+            genderSelect.required = true;
+            genderSelect.style.backgroundColor = '';
+        } else {
+            genderSelect.disabled = true;
+            genderSelect.required = false;
+            genderSelect.value = '';
+            genderSelect.style.backgroundColor = '#f5f5f5';
+        }
+        
+        generateChartName();
+        updateDimensions();
+    }
+    
+    // Grid rendering function
+    function renderGrid(rows, cols) {
+        if (cols === undefined) cols = rows;
+        
+        const gridTable = document.getElementById('chart-grid');
+        const gridDisplay = document.getElementById('grid-size-display');
+        const sectionControls = document.getElementById('section-controls');
+        
+        if (!gridTable) return;
+        
+        // Update grid dimensions
+        gridRows = rows;
+        gridCols = cols;
+        
+        gridTable.innerHTML = '';
+        
+        // Clean up old hidden inputs before re-rendering
+        const chartForm = document.getElementById('chartForm');
+        const oldInputs = chartForm.querySelectorAll('input[name^="cell_symbol_"]');
+        oldInputs.forEach(input => input.remove());
+        
+        numRowsInput.value = rows;
+        numColsInput.value = cols;
+        
+        if (gridDisplay) gridDisplay.textContent = `Grid: ${rows}x${cols}`;
+        
+        // Show section controls now that grid exists
+        if (sectionControls) {
+            sectionControls.style.display = 'block';
+            updateRowSectionsSummary();
+        }
+
+        // Scroll grid container to bottom right on edit mode, after grid is rendered and visible
+        if (editMode) {
+            setTimeout(function() {
+                const gridContainer = document.getElementById('chart-grid-container');
+                if (gridContainer && gridContainer.offsetParent !== null) {
+                    gridContainer.scrollLeft = gridContainer.scrollWidth;
+                    gridContainer.scrollTop = gridContainer.scrollHeight;
+                    console.log('Scrolled grid container to bottom right (after render)');
+                }
+            }, 100);
+        }
+        
+        // Create header row
+        const headerRow = document.createElement('tr');
+        
+        // Corner cell
+        const corner = document.createElement('th');
+        corner.className = 'grid-col-header';
+        headerRow.appendChild(corner);
+        
+        // Column headers (reversed for knitting: right to left)
+        for (let col = cols; col >= 1; col--) {
+            const th = document.createElement('th');
+            th.textContent = col;
+            th.className = 'grid-col-header';
+            
+            headerRow.appendChild(th);
+        }
+        gridTable.appendChild(headerRow);
+        
+        // Calculate which rows should be suppressed (collapsed) due to section repeats
+        const suppressedRows = new Set();
+        rowSections.forEach(section => {
+            const rowsInSection = section.endRow - section.startRow + 1;
+            const collapsedRowCount = rowsInSection * section.repeatCount;
+            // Rows after endRow are suppressed
+            for (let i = 1; i <= collapsedRowCount; i++) {
+                suppressedRows.add(section.endRow + i);
+            }
+        });
+        
+        console.log('Suppressed rows:', Array.from(suppressedRows).sort((a,b) => a-b));
+        
+        // Create data rows (reversed for knitting: bottom to top, so highest row number first)
+        // Color palettes for visual differentiation
+        const sectionBgColors = ['#dff0fa', '#ffe6f0', '#fff3e6', '#e6f7e6', '#f0e6ff', '#fff9e6'];
+        const subsectionBorderColors = ['#17a2b8', '#e83e8c', '#fd7e14', '#28a745', '#6f42c1', '#ffc107'];
+        
+        for (let row = rows; row >= 1; row--) {
+            // Skip suppressed/collapsed rows
+            if (suppressedRows.has(row)) {
+                console.log(`Skipping suppressed row ${row}`);
+                continue;
+            }
+            
+            const tr = document.createElement('tr');
+            
+            // Check if this row is at section/subsection boundaries (three-level hierarchy)
+            const isRowSectionStart = rowSections.some(section => section.startRow === row);
+            const isRowSectionEnd = rowSections.some(section => section.endRow === row);
+            const rowSection = rowSections.find(section => row >= section.startRow && row <= section.endRow);
+            const sectionIndex = rowSections.findIndex(section => row >= section.startRow && row <= section.endRow);
+            
+            // Find the row subsection for this row
+            const rowSubsection = rowSection?.rowSubsections?.find(subsection => 
+                row >= subsection.startRow && row <= subsection.endRow
+            );
+            const subsectionIndex = rowSection?.rowSubsections?.findIndex(subsection => 
+                row >= subsection.startRow && row <= subsection.endRow
+            ) ?? -1;
+            // Debug logging for first row of each section
+            if (row === rowSection?.startRow && rowSection?.rowSubsections) {
+                console.log(`Row ${row}: Section has ${rowSection.rowSubsections.length} subsection(s)`, rowSection.rowSubsections);
+            }
+            // Only show green dashed line if subsection starts here AND it's NOT the row section start
+            const isSubsectionStart = rowSection?.rowSubsections?.some(subsection => 
+                subsection.startRow === row && row !== rowSection.startRow
+            );
+            
+            // Row header
+            const rowHeader = document.createElement('th');
+            rowHeader.className = 'grid-row-header';
+            
+            // Build row header text with labels
+            let headerText = row.toString();
+            
+            // Add section label if this is the top row (endRow) of a section
+            if (rowSection && row === rowSection.endRow && rowSection.label) {
+                headerText += ` ${rowSection.label}`;
+            }
+            
+            // Add subsection label if this is the top row (endRow) of a subsection
+            if (rowSubsection && row === rowSubsection.endRow && rowSubsection.label) {
+                headerText += ` ${rowSubsection.label}`;
+            }
+            
+            rowHeader.textContent = headerText;
+            
+            // Add visual styling for row sections and subsections
+            if (rowSection) {
+                // Use different color for each section (cycle through colors)
+                const bgColor = sectionBgColors[sectionIndex % sectionBgColors.length];
+                rowHeader.style.backgroundColor = bgColor;
+                
+                // Build tooltip
+                let tooltip = '';
+                
+                // If this is the endRow (top) of a section, show section instructions
+                if (row === rowSection.endRow) {
+                    if (rowSection.label) {
+                        tooltip = `Section ${rowSection.label}`;
+                    } else {
+                        tooltip = `Section: Rows ${rowSection.startRow}-${rowSection.endRow}`;
+                    }
+                    tooltip += ` (repeat ${rowSection.repeatCount}x)`;
+                    if (rowSection.instructions) {
+                        tooltip += `\n${rowSection.instructions}`;
+                    }
+                } else {
+                    // Otherwise show basic section info
+                    tooltip = `Part of section: Rows ${rowSection.startRow}-${rowSection.endRow} (repeat ${rowSection.repeatCount}x)`;
+                    if (rowSection.instructions) tooltip += `\n${rowSection.instructions}`;
+                }
+                
+                // If this is the endRow (top) of a subsection, show subsection instructions
+                if (rowSubsection && row === rowSubsection.endRow) {
+                    if (rowSubsection.label) {
+                        tooltip += `\nSubsection ${rowSubsection.label}`;
+                    } else {
+                        tooltip += `\nSubsection: Rows ${rowSubsection.startRow}-${rowSubsection.endRow}`;
+                    }
+                    if (rowSubsection.instructions) {
+                        tooltip += `\n${rowSubsection.instructions}`;
+                    }
+                } else if (rowSubsection) {
+                    // Show basic subsection info
+                    tooltip += `\nSubsection: Rows ${rowSubsection.startRow}-${rowSubsection.endRow}`;
+                    if (rowSubsection.instructions) tooltip += `\n${rowSubsection.instructions}`;
+                }
+                
+                rowHeader.title = tooltip;
+            }
+            
+            tr.appendChild(rowHeader);
+            
+            // Data cells (reversed for knitting: right to left)
+            for (let col = cols; col >= 1; col--) {
+                const td = document.createElement('td');
+                td.className = 'grid-cell';
+                
+                // Check if this column is collapsed due to column section repeats
+                let isCollapsedColumn = false;
+                let collapsedBySection = null;
+                if (rowSubsection && rowSubsection.columnSections) {
+                    for (const colSec of rowSubsection.columnSections) {
+                        const colsInSection = colSec.endCol - colSec.startCol + 1;
+                        const collapsedColCount = colsInSection * colSec.repeatCount;
+                        // Columns after endCol are collapsed
+                        if (col > colSec.endCol && col <= colSec.endCol + collapsedColCount) {
+                            isCollapsedColumn = true;
+                            collapsedBySection = colSec;
+                            break;
+                        }
+                    }
+                }
+                
+                // Apply section styling with different color per section
+                if (rowSection) {
+                    const bgColor = sectionBgColors[sectionIndex % sectionBgColors.length];
+                    td.style.backgroundColor = bgColor;
+                }
+                
+                // Grey out collapsed columns
+                if (isCollapsedColumn) {
+                    td.style.backgroundColor = '#e0e0e0';
+                    td.style.opacity = '0.5';
+                    td.style.cursor = 'not-allowed';
+                    
+                    // Build tooltip with column section information
+                    let collapsedTooltip = `Column Section: Columns ${collapsedBySection.startCol}-${collapsedBySection.endCol} (repeat ${collapsedBySection.repeatCount}x)`;
+                    collapsedTooltip += `\nThis column is collapsed due to repeats`;
+                    if (collapsedBySection.instructions) {
+                        collapsedTooltip += `\n${collapsedBySection.instructions}`;
+                    }
+                    td.title = collapsedTooltip;
+                }
+                
+                // Add colored dashed borders around entire subsection (all 4 sides)
+                if (rowSubsection && subsectionIndex >= 0) {
+                    const borderColor = subsectionBorderColors[subsectionIndex % subsectionBorderColors.length];
+                    // Top border at END row of subsection (highest row number, topmost visually)
+                    if (row === rowSubsection.endRow) {
+                        td.style.borderTop = `2px dashed ${borderColor}`;
+                    }
+                    // Bottom border at START row of subsection (lowest row number, bottommost visually)
+                    if (row === rowSubsection.startRow) {
+                        td.style.borderBottom = `2px dashed ${borderColor}`;
+                    }
+                    // Left border at highest column (leftmost visually) for all rows in subsection
+                    if (col === gridCols) {
+                        td.style.borderLeft = `2px dashed ${borderColor}`;
+                    }
+                    // Right border at column 1 (rightmost visually) for all rows in subsection
+                    if (col === 1) {
+                        td.style.borderRight = `2px dashed ${borderColor}`;
+                    }
+                }
+                
+                // Check for column section boundaries - draw complete box around subsection's column range
+                if (rowSubsection && rowSubsection.columnSections && rowSubsection.columnSections.length > 0 && row === rowSubsection.endRow && col === gridCols) {
+                    console.log(`Row ${row}: Found ${rowSubsection.columnSections.length} column section(s) in subsection ${rowSubsection.startRow}-${rowSubsection.endRow}`, rowSubsection.columnSections);
+                }
+                const colSection = rowSubsection?.columnSections?.find(cs => col >= cs.startCol && col <= cs.endCol);
+                if (colSection) {
+                    // Since grid renders right-to-left: higher col numbers appear on LEFT visually
+                    // Left border at END column (higher number, leftmost visually)
+                    if (col === colSection.endCol) {
+                        td.style.borderLeft = '2px solid #dc3545';
+                    }
+                    // Right border at START column (lower number, rightmost visually)
+                    if (col === colSection.startCol) {
+                        td.style.borderRight = '2px solid #dc3545';
+                    }
+                    // Since grid renders bottom-to-top: higher row numbers appear on TOP visually
+                    // Top border at END row (higher number, topmost visually)
+                    if (row === rowSubsection.endRow) {
+                        td.style.borderTop = '2px solid #dc3545';
+                    }
+                    // Bottom border at START row (lower number, bottommost visually)
+                    if (row === rowSubsection.startRow) {
+                        td.style.borderBottom = '2px solid #dc3545';
+                    }
+                    
+                    // Add tooltip with column section information
+                    let colTooltip = `Column Section: Columns ${colSection.startCol}-${colSection.endCol} (repeat ${colSection.repeatCount}x)`;
+                    if (colSection.instructions) {
+                        colTooltip += `\n${colSection.instructions}`;
+                    }
+                    td.title = colTooltip;
+                }
+                
+                // Add hidden input for form submission
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = `cell_symbol_${row}_${col}`;
+                hiddenInput.value = '';
+                
+                // In edit mode, restore saved symbols (use 0-based indexing for lookup)
+                const cellKey = `${row-1},${col-1}`;
+                if (editMode && cellSymbols && cellSymbols[cellKey]) {
+                    const elementId = cellSymbols[cellKey];
+                    hiddenInput.value = elementId;
+                    console.log(`Cell (${row},${col}) -> key "${cellKey}" -> element_id: ${elementId}`);
+                    // Store element ID to restore after cell is added to DOM
+                    td.dataset.restoreSymbol = elementId;
+                }
+                
+                // Make cell clickable for symbol selection with single click (unless collapsed)
+                if (!isCollapsedColumn) {
+                    td.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // Don't open modal if we're finishing a drag operation
+                        if (!isDragging) {
+                            openSymbolModal(td, hiddenInput, row, col);
+                        }
+                    }, { passive: false });
+                    
+                    // Add keyboard event listeners for copy/paste (cells must be focusable)
+                    td.setAttribute('tabindex', '0');
+                    td.addEventListener('keydown', function(e) {
+                        handleCellKeyDown(e, td, hiddenInput, row, col);
+                    });
+                    
+                    // Add mouse event listeners for drag-to-fill
+                    td.addEventListener('mousedown', function(e) {
+                        handleCellMouseDown(e, td, hiddenInput, row, col);
+                    });
+                    
+                    td.addEventListener('mouseenter', function(e) {
+                        handleCellMouseEnter(e, td, hiddenInput, row, col);
+                    });
+                    
+                    td.addEventListener('mouseup', function(e) {
+                        handleCellMouseUp(e);
+                    });
+                } else {
+                    // Collapsed columns are not interactive
+                    td.setAttribute('tabindex', '-1');
+                }
+                
+                // Add the hidden input to the form
+                document.getElementById('chartForm').appendChild(hiddenInput);
+                
+                tr.appendChild(td);
+            }
+            gridTable.appendChild(tr);
+        }
+        
+        console.log(`Grid rendered successfully: ${rows}x${cols} with ${rowSections.length} row sections`);
+        
+        // Now that grid is in DOM, restore symbols in edit mode
+        if (editMode && cellSymbols) {
+            console.log('=== SYMBOL RESTORATION START ===');
+            console.log('Edit mode active:', editMode);
+            console.log('Cell symbols available:', Object.keys(cellSymbols).length);
+            console.log('Cell symbols data:', cellSymbols);
+            
+            const cellsToRestore = gridTable.querySelectorAll('td[data-restore-symbol]');
+            console.log('Cells marked for restoration:', cellsToRestore.length);
+            
+            cellsToRestore.forEach(cell => {
+                const symbolId = cell.dataset.restoreSymbol;
+                console.log('Restoring symbol to cell:', symbolId);
+                updateCellDisplay(cell, symbolId);
+                // Clean up the temporary data attribute
+                delete cell.dataset.restoreSymbol;
+            });
+            console.log(`=== SYMBOL RESTORATION END: Restored ${cellsToRestore.length} symbols ===`);
+        } else {
+            console.log('Symbol restoration skipped:', { editMode, hasCellSymbols: !!cellSymbols, cellSymbolsCount: Object.keys(cellSymbols || {}).length });
+        }
+    }
+    
+    // Event handlers
+    if (pieceSelect) {
+        pieceSelect.addEventListener('change', function() {
+            console.log('Piece changed:', this.value);
+            generateChartName();
+            toggleHumanFields();
+            checkInputsAndShowExplanation();
+            updateDimensions();
+        });
+    }
+    
+    if (ageSelect) {
+        ageSelect.addEventListener('change', function() {
+            console.log('Age changed:', this.value);
+            toggleSizeField();
+            toggleGenderField();
+            generateChartName();
+            updateDimensions();
+        });
+    }
+    
+    if (sizeSelect) {
+        sizeSelect.addEventListener('change', function() {
+            console.log('Size changed:', this.value);
+            generateChartName();
+            updateDimensions();
+        });
+    }
+    
+    if (genderSelect) {
+        genderSelect.addEventListener('change', function() {
+            console.log('Gender changed:', this.value);
+            generateChartName();
+            updateDimensions();
+        });
+    }
+    
+    // Initialize with disabled inputs and no grid (unless in edit mode)
+    if (!editMode) {
+        numRowsInput.value = 0;
+        numColsInput.value = 0;
+        numRowsInput.disabled = true;
+        numColsInput.disabled = true;
+    }
+    
+    console.log('Elements found check:', {
+        nameInput: !!nameInput,
+        pieceSelect: !!pieceSelect,
+        ageSelect: !!ageSelect,
+        sizeSelect: !!sizeSelect,
+        genderSelect: !!genderSelect,
+        calculationStatus: !!calculationStatus,
+        calculationElements: !!(rowsCalculation && stitchesCalculation && finalResult),
+        calculationExplanation: !!calculationExplanation
+    });
+    
+    console.log('Data available check:', {
+        patternGauge: patternGauge,
+        patternRowsGauge: patternRowsGauge,
+        DMNIntegration: 'Enabled'
+    });
+    
+    console.log('Initialized with disabled inputs and hidden grid');
+    
+    // Set initial state for human fields based on selected piece
+    toggleHumanFields();
+    // Set initial state for size field based on selected age (in case editing existing chart)
+    if (ageSelect.value) {
+        toggleSizeField();
+        toggleGenderField();
+    }
+    
+    // In edit mode, render grid with existing dimensions
+    if (editMode) {
+        const rows = parseInt(numRowsInput.value);
+        const cols = parseInt(numColsInput.value);
+        console.log('Edit mode detected - num_rows input value:', numRowsInput.value);
+        console.log('Edit mode detected - num_columns input value:', numColsInput.value);
+        console.log('Parsed dimensions:', { rows, cols });
+        
+        if (rows > 0 && cols > 0) {
+            console.log('Edit mode: rendering grid with existing dimensions', { rows, cols });
+            // Note: inputs are readonly in edit mode, not disabled
+            submitBtn.disabled = false;
+            const gridContainer = document.getElementById('chart-grid-container');
+            const gridMessage = document.getElementById('grid-message');
+            const gridSizeDisplay = document.getElementById('grid-size-display');
+            if (gridContainer) {
+                gridContainer.style.display = 'inline-block';
+            }
+            if (gridMessage) {
+                gridMessage.style.display = 'none';
+            }
+            if (gridSizeDisplay) {
+                gridSizeDisplay.style.display = 'block';
+                gridSizeDisplay.textContent = `Grid: ${rows}x${cols}`;
+            }
+            
+            // Load saved row sections in edit mode (three-level hierarchy)
+            if (savedRowSections && savedRowSections.length > 0) {
+                console.log('Loading saved row sections:', savedRowSections);
+                rowSections = savedRowSections.map(section => {
+                    const mappedSubsections = (section.rowSubsections || []).map(subsection => {
+                        // Assign unique subsection IDs
+                        const subsectionWithId = {
+                            id: nextSubsectionId++,
+                            startRow: subsection.startRow,
+                            endRow: subsection.endRow,
+                            instructions: subsection.instructions || '',
+                            label: subsection.label || '',
+                            columnSections: subsection.columnSections || []
+                        };
+                        return subsectionWithId;
+                    });
+                    
+                    return {
+                        id: nextSectionId++,
+                        startRow: section.startRow,
+                        endRow: section.endRow,
+                        repeatCount: section.repeatCount,
+                        instructions: section.instructions || '',
+                        label: section.label || '',
+                        rowSubsections: mappedSubsections
+                    };
+                });
+                console.log(`Loaded ${rowSections.length} row section(s) with subsections`);
+            }
+            
+            // Render grid - this will trigger symbol restoration
+            console.log('About to call renderGrid with:', { rows, cols, editMode, cellSymbolsAvailable: !!cellSymbols, sectionCount: rowSections.length });
+            renderGrid(rows, cols);
+        } else {
+            console.error('Invalid dimensions in edit mode:', { rows, cols });
+        }
+    }
+    // Check if we can calculate dimensions initially (create mode)
+    else if (patternGauge && pieceSelect.value) {
+        updateDimensions();
+    }
+
+    // In edit mode, refresh dimensions from DMN so workbook updates are reflected.
+    if (editMode && pieceSelect.value && ageSelect.value) {
+        updateDimensions();
+    }
+    
+    console.log('DMN-based grid system initialized successfully!');
+    
+    // ======================
+    // SECTION MANAGEMENT EVENT LISTENERS
+    // ======================
+    
+    // Main section manager button
+    const manageSectionsBtn = document.getElementById('manage-row-sections-btn');
+    if (manageSectionsBtn) {
+        manageSectionsBtn.addEventListener('click', openRowSectionManager);
+    }
+    
+    // Row Section Modal buttons
+    const closeRowSectionModalBtn = document.getElementById('closeRowSectionModal');
+    const saveRowSectionsBtn = document.getElementById('saveRowSectionsBtn');
+    const addRowSectionBtn = document.getElementById('addRowSectionBtn');
+    
+    if (closeRowSectionModalBtn) {
+        closeRowSectionModalBtn.addEventListener('click', closeRowSectionManager);
+    }
+    if (saveRowSectionsBtn) {
+        saveRowSectionsBtn.addEventListener('click', closeRowSectionManager);
+    }
+    if (addRowSectionBtn) {
+        addRowSectionBtn.addEventListener('click', () => openRowSectionEditor(null));
+    }
+    
+    // Row Section Editor Modal buttons
+    const closeRowSectionEditorBtn = document.getElementById('closeRowSectionEditor');
+    const cancelRowSectionEditorBtn = document.getElementById('cancelRowSectionEditor');
+    const saveRowSectionBtn = document.getElementById('saveRowSection');
+    const manageRowSubsectionsBtn = document.getElementById('manageRowSubsectionsBtn');
+    
+    if (closeRowSectionEditorBtn) {
+        closeRowSectionEditorBtn.addEventListener('click', closeRowSectionEditor);
+    }
+    if (cancelRowSectionEditorBtn) {
+        cancelRowSectionEditorBtn.addEventListener('click', closeRowSectionEditor);
+    }
+    if (saveRowSectionBtn) {
+        saveRowSectionBtn.addEventListener('click', saveRowSection);
+    }
+    if (manageRowSubsectionsBtn) {
+        manageRowSubsectionsBtn.addEventListener('click', openRowSubsectionManager);
+    }
+    
+    // Update row count display when inputs change
+    const sectionStartRowInput = document.getElementById('sectionStartRow');
+    const sectionEndRowInput = document.getElementById('sectionEndRow');
+    const sectionRepeatInput = document.getElementById('sectionRepeatCount');
+    
+    if (sectionStartRowInput) {
+        sectionStartRowInput.addEventListener('input', updateSectionRowCount);
+    }
+    if (sectionEndRowInput) {
+        sectionEndRowInput.addEventListener('input', updateSectionRowCount);
+    }
+    if (sectionRepeatInput) {
+        sectionRepeatInput.addEventListener('input', updateSectionRowCount);
+    }
+    
+    // Row Subsection Manager Modal buttons
+    const closeRowSubsectionModalBtn = document.getElementById('closeRowSubsectionModal');
+    const saveRowSubsectionsBtn = document.getElementById('saveRowSubsections');
+    const addRowSubsectionBtn = document.getElementById('addRowSubsectionBtn');
+    
+    if (closeRowSubsectionModalBtn) {
+        closeRowSubsectionModalBtn.addEventListener('click', closeRowSubsectionManager);
+    }
+    if (saveRowSubsectionsBtn) {
+        saveRowSubsectionsBtn.addEventListener('click', closeRowSubsectionManager);
+    }
+    if (addRowSubsectionBtn) {
+        addRowSubsectionBtn.addEventListener('click', () => openRowSubsectionEditor(null));
+    }
+    
+    // Row Subsection Editor Modal buttons
+    const closeRowSubsectionEditorBtn = document.getElementById('closeRowSubsectionEditor');
+    const cancelRowSubsectionEditorBtn = document.getElementById('cancelRowSubsectionEditor');
+    const saveRowSubsectionBtn = document.getElementById('saveRowSubsection');
+    const manageSubsectionColumnsBtn = document.getElementById('manageSubsectionColumnsBtn');
+    
+    if (closeRowSubsectionEditorBtn) {
+        closeRowSubsectionEditorBtn.addEventListener('click', closeRowSubsectionEditor);
+    }
+    if (cancelRowSubsectionEditorBtn) {
+        cancelRowSubsectionEditorBtn.addEventListener('click', closeRowSubsectionEditor);
+    }
+    if (saveRowSubsectionBtn) {
+        saveRowSubsectionBtn.addEventListener('click', saveRowSubsection);
+    }
+    if (manageSubsectionColumnsBtn) {
+        manageSubsectionColumnsBtn.addEventListener('click', openSubsectionGrid);
+    }
+    
+    // Subsection Grid Modal buttons
+    const closeSubsectionGridBtn = document.getElementById('closeSubsectionGrid');
+    const saveSubsectionGridBtn = document.getElementById('saveSubsectionGrid');
+    const createColumnSectionBtn = document.getElementById('createColumnSectionBtn');
+    const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+    
+    if (closeSubsectionGridBtn) {
+        closeSubsectionGridBtn.addEventListener('click', closeSubsectionGrid);
+    }
+    if (saveSubsectionGridBtn) {
+        saveSubsectionGridBtn.addEventListener('click', closeSubsectionGrid);
+    }
+    if (createColumnSectionBtn) {
+        createColumnSectionBtn.addEventListener('click', createColumnSectionFromGrid);
+    }
+    if (clearSelectionBtn) {
+        clearSelectionBtn.addEventListener('click', clearColumnSelection);
+    }
+    
+    // Update column repeat display when repeat count changes
+    const gridRepeatCountInput = document.getElementById('gridRepeatCount');
+    if (gridRepeatCountInput) {
+        gridRepeatCountInput.addEventListener('input', updateColumnRepeatDisplay);
+    }
+    
+    // Update subsection row count display when inputs change
+    const subsectionStartRowInput = document.getElementById('subsectionStartRow');
+    const subsectionEndRowInput = document.getElementById('subsectionEndRow');
+    
+    if (subsectionStartRowInput) {
+        subsectionStartRowInput.addEventListener('input', updateSubsectionRowCount);
+    }
+    if (subsectionEndRowInput) {
+        subsectionEndRowInput.addEventListener('input', updateSubsectionRowCount);
+    }
+    
+    // Column Section Modal buttons
+    const closeColSectionModalBtn = document.getElementById('closeColumnSectionModal');
+    const saveColSectionsBtn = document.getElementById('saveColumnSections');
+    const addColSectionBtn = document.getElementById('addColumnSectionBtn');
+    
+    if (closeColSectionModalBtn) {
+        closeColSectionModalBtn.addEventListener('click', closeColumnSectionManager);
+    }
+    if (saveColSectionsBtn) {
+        saveColSectionsBtn.addEventListener('click', closeColumnSectionManager);
+    }
+    if (addColSectionBtn) {
+        addColSectionBtn.addEventListener('click', addColumnSection);
+    }
+    
+    // Update column count display when inputs change
+    const colStartInput = document.getElementById('colSectionStartCol');
+    const colEndInput = document.getElementById('colSectionEndCol');
+    
+    if (colStartInput) {
+        colStartInput.addEventListener('input', updateColSectionColCount);
+    }
+    if (colEndInput) {
+        colEndInput.addEventListener('input', updateColSectionColCount);
+    }
+    
+    // Handle clicking outside modals to close them
+    window.addEventListener('click', function(event) {
+        const rowSectionModal = document.getElementById('rowSectionModal');
+        const rowSectionEditorModal = document.getElementById('rowSectionEditorModal');
+        const colSectionModal = document.getElementById('columnSectionModal');
+        
+        if (event.target === rowSectionModal) {
+            closeRowSectionManager();
+        }
+        if (event.target === rowSectionEditorModal) {
+            closeRowSectionEditor();
+        }
+        if (event.target === colSectionModal) {
+            closeColumnSectionManager();
+        }
+    });
+    
+    // Form submission handler to ensure inputs are enabled and sections are included
+    const chartForm = document.querySelector('form');
+    if (chartForm) {
+        chartForm.addEventListener('submit', function(e) {
+            // Re-enable inputs before submission so their values are sent
+            numRowsInput.disabled = false;
+            numColsInput.disabled = false;
+            
+            // Remove old section inputs if they exist
+            const oldSectionInputs = chartForm.querySelectorAll('input[name^="section_"]');
+            oldSectionInputs.forEach(input => input.remove());
+            
+            // Add row sections, subsections, and column sections as hidden inputs (three-level hierarchy)
+            rowSections.forEach((section, idx) => {
+                const sectionData = {
+                    start_row: section.startRow - 1, // Convert to 0-based for backend
+                    end_row: section.endRow - 1,     // Convert to 0-based for backend
+                    repeat_count: section.repeatCount,
+                    instructions: section.instructions || '',
+                    label: section.label || ''
+                };
+                
+                // Add row section data
+                Object.entries(sectionData).forEach(([key, value]) => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = `section_${idx}_${key}`;
+                    input.value = value;
+                    chartForm.appendChild(input);
+                });
+                
+                // Add row subsections for this row section
+                if (section.rowSubsections && section.rowSubsections.length > 0) {
+                    section.rowSubsections.forEach((subsection, subsecIdx) => {
+                        const subsectionData = {
+                            start_row: subsection.startRow - 1, // Convert to 0-based
+                            end_row: subsection.endRow - 1,     // Convert to 0-based
+                            instructions: subsection.instructions || '',
+                            label: subsection.label || ''
+                        };
+                        
+                        // Add row subsection data
+                        Object.entries(subsectionData).forEach(([key, value]) => {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = `section_${idx}_subsec_${subsecIdx}_${key}`;
+                            input.value = value;
+                            chartForm.appendChild(input);
+                        });
+                        
+                        // Add column sections for this row subsection
+                        if (subsection.columnSections && subsection.columnSections.length > 0) {
+                            subsection.columnSections.forEach((colSection, colIdx) => {
+                                const colData = {
+                                    start_col: colSection.startCol - 1, // Convert to 0-based
+                                    end_col: colSection.endCol - 1,     // Convert to 0-based
+                                    repeat_count: colSection.repeatCount,
+                                    instructions: colSection.instructions || ''
+                                };
+                                
+                                Object.entries(colData).forEach(([key, value]) => {
+                                    const input = document.createElement('input');
+                                    input.type = 'hidden';
+                                    input.name = `section_${idx}_subsec_${subsecIdx}_col_${colIdx}_${key}`;
+                                    input.value = value;
+                                    chartForm.appendChild(input);
+                                });
+                            });
+                        }
+                    });
+                }
+            });
+            
+            console.log('Form submitted with values:', {
+                rows: numRowsInput.value,
+                columns: numColsInput.value,
+                sections: rowSections.length
+            });
+        });
+    }
+    
+    // Symbol Modal Management
+    const modal = document.getElementById('symbolModal');
+    const closeModal = document.getElementById('closeModal');
+    const cancelModal = document.getElementById('cancelModal');
+    const modalLoadingMessage = document.getElementById('modalLoadingMessage');
+    const modalSymbolGrid = document.getElementById('modalSymbolGrid');
+    let currentCell = null;
+    let currentCellInput = null;
+    let currentCellRow = null;
+    let currentCellCol = null;
+    let symbolsLoaded = false;
+    // modalIsOpen is declared at the top of the script
+    
+    // Copy/paste and drag-to-fill state
+    let copiedSymbolId = null;
+    let isDragging = false;
+    let dragStartCell = null;
+    let draggedCells = [];
+    let dragSourceSymbolId = null;
+    
+    function loadSymbolsOnce() {
+        if (symbolsLoaded) {
+            console.log('Symbols already loaded, skipping');
+            return Promise.resolve();
+        }
+        
+        console.log('Loading symbols for the first time...');
+        return new Promise((resolve) => {
+            const images = modalSymbolGrid.querySelectorAll('img[data-src]');
+            let loadedCount = 0;
+            const totalImages = images.length;
+            
+            if (totalImages === 0) {
+                console.log('No images to load');
+                symbolsLoaded = true;
+                resolve();
+                return;
+            }
+            
+            // Start loading all images
+            images.forEach(img => {
+                const src = img.getAttribute('data-src');
+                img.src = src;
+                img.style.display = '';
+                img.removeAttribute('data-src');
+                
+                const onComplete = () => {
+                    loadedCount++;
+                    if (loadedCount === totalImages) {
+                        symbolsLoaded = true;
+                        console.log('All symbols loaded!');
+                        resolve();
+                    }
+                };
+                
+                if (img.complete) {
+                    onComplete();
+                } else {
+                    img.onload = onComplete;
+                    img.onerror = onComplete;
+                }
+            });
+            
+            // Reduced timeout - resolve after 2 seconds even if not all loaded
+            setTimeout(() => {
+                if (!symbolsLoaded) {
+                    console.log('Timeout reached after 2s, marking symbols as loaded');
+                    symbolsLoaded = true;
+                    resolve();
+                }
+            }, 2000);
+        });
+    }
+    
+    function openSymbolModal(cell, hiddenInput, row, col) {
+        console.log('openSymbolModal called with:', { cell, hiddenInput, row, col });
+        console.log('Cell element:', cell);
+        console.log('Cell innerHTML:', cell.innerHTML);
+        currentCell = cell;
+        currentCellInput = hiddenInput;
+        currentCellRow = row;
+        currentCellCol = col;
+        modalIsOpen = true;
+        console.log('Current cell and input set:', { currentCell, currentCellInput, row, col });
+        console.log('Current cell is valid:', currentCell instanceof HTMLElement);
+        
+        // Highlight the selected cell
+        if (currentCell) {
+            currentCell.style.backgroundColor = '#e3f2fd'; // Light blue
+        }
+        
+        // Show modal immediately for better responsiveness
+        modal.style.display = 'block';
+        
+        // Show loading message if symbols not yet loaded
+        if (!symbolsLoaded) {
+            modalLoadingMessage.style.display = 'block';
+            modalSymbolGrid.style.display = 'none';
+            
+            loadSymbolsOnce().then(() => {
+                modalLoadingMessage.style.display = 'none';
+                modalSymbolGrid.style.display = 'grid';
+                console.log('Symbols loaded and grid displayed');
+            });
+        } else {
+            // Symbols already loaded, just show the grid
+            modalLoadingMessage.style.display = 'none';
+            modalSymbolGrid.style.display = 'grid';
+        }
+        
+        // Highlight current symbol if any
+        const currentSymbolId = hiddenInput.value;
+        console.log('Current symbol ID in cell:', currentSymbolId);
+        document.querySelectorAll('.modal-symbol-option').forEach(opt => {
+            if (opt.dataset.symbolId === currentSymbolId) {
+                opt.style.border = '2px solid #0066cc';
+            } else {
+                opt.style.border = '1px solid #ccc';
+            }
+        });
+    }
+    
+    function closeSymbolModal() {
+        console.log('Closing symbol modal');
+        modal.style.display = 'none';
+        modalIsOpen = false;
+        
+        // Remove highlight from selected cell
+        if (currentCell && currentCellRow) {
+            // Check if cell is in a row section
+            const rowSection = rowSections.find(section => currentCellRow >= section.startRow && currentCellRow <= section.endRow);
+            if (rowSection) {
+                const sectionIndex = rowSections.findIndex(section => currentCellRow >= section.startRow && currentCellRow <= section.endRow);
+                const sectionBgColors = ['#dff0fa', '#ffe6f0', '#fff3e6', '#e6f7e6', '#f0e6ff', '#fff9e6'];
+                currentCell.style.backgroundColor = sectionBgColors[sectionIndex % sectionBgColors.length];
+            } else {
+                currentCell.style.backgroundColor = '';
+            }
+        }
+        
+        currentCell = null;
+        currentCellInput = null;
+        currentCellRow = null;
+        currentCellCol = null;
+        console.log('Modal closed and references cleared');
+    }
+    
+    function updateCellDisplay(cell, symbolId) {
+        console.log('updateCellDisplay called with:', { cell, symbolId });
+        
+        if (!cell) {
+            console.error('No cell provided to updateCellDisplay');
+            return;
+        }
+        
+        // Clear existing symbol
+        while (cell.firstChild) {
+            cell.removeChild(cell.firstChild);
+        }
+        cell.removeAttribute('title');
+        
+        if (symbolId && symbolId !== '') {
+            console.log('Creating new element for symbol:', symbolId);
+            
+            // Find the symbol option in the modal to get metadata
+            const symbolOption = document.querySelector(`.modal-symbol-option[data-symbol-id="${symbolId}"]`);
+            const description = symbolOption ? symbolOption.dataset.symbolDesc : '';
+            const abbreviation = symbolOption ? symbolOption.dataset.symbolAbbr : '';
+            const hasSymbol = symbolOption ? symbolOption.dataset.hasSymbol === 'true' : true;
+            
+            // Set hover text with description
+            if (description) {
+                cell.title = description;
+            }
+            
+            if (hasSymbol) {
+                // Add symbol image to cell
+                const img = document.createElement('img');
+                img.src = `/elements/${symbolId}/symbol`;
+                img.style.cssText = 'width: 22px; height: 22px; object-fit: contain; pointer-events: none; display: block; margin: 2.5px auto;';
+                img.alt = description || 'Symbol';
+                
+                // Add error handler - if image fails to load, show abbreviation instead
+                img.onerror = function() {
+                    console.error('Failed to load image:', img.src);
+                    if (abbreviation) {
+                        cell.removeChild(img);
+                        const span = document.createElement('span');
+                        span.textContent = abbreviation;
+                        span.style.cssText = 'font-size: 11px; font-weight: bold; pointer-events: none;';
+                        cell.appendChild(span);
+                    }
+                };
+                
+                img.onload = function() {
+                    console.log('Image loaded successfully:', img.src);
+                };
+                
+                cell.appendChild(img);
+                console.log('Image element appended to cell');
+            } else {
+                // No symbol image, show abbreviation
+                const span = document.createElement('span');
+                span.textContent = abbreviation;
+                span.style.cssText = 'font-size: 11px; font-weight: bold; pointer-events: none;';
+                cell.appendChild(span);
+                console.log('Abbreviation text appended to cell');
+            }
+        } else {
+            console.log('No symbol ID or empty, clearing cell');
+        }
+    }
+    
+    // Copy/Paste Functions
+    function handleCellKeyDown(e, cell, input, row, col) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+            // Copy
+            e.preventDefault();
+            e.stopPropagation();
+            copiedSymbolId = input.value;
+            console.log('Copied symbol:', copiedSymbolId);
+            
+            // Visual feedback
+            const originalBg = cell.style.backgroundColor;
+            cell.style.backgroundColor = '#d4edda'; // Light green
+            setTimeout(() => {
+                // Restore background based on whether cell is in section
+                const rowSection = rowSections.find(section => row >= section.startRow && row <= section.endRow);
+                if (rowSection) {
+                    const sectionIndex = rowSections.findIndex(section => row >= section.startRow && row <= section.endRow);
+                    const sectionBgColors = ['#dff0fa', '#ffe6f0', '#fff3e6', '#e6f7e6', '#f0e6ff', '#fff9e6'];
+                    cell.style.backgroundColor = sectionBgColors[sectionIndex % sectionBgColors.length];
+                } else {
+                    cell.style.backgroundColor = originalBg;
+                }
+            }, 200);
+        } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+            // Paste
+            e.preventDefault();
+            e.stopPropagation();
+            if (copiedSymbolId !== null) {
+                input.value = copiedSymbolId;
+                updateCellDisplay(cell, copiedSymbolId);
+                console.log('Pasted symbol:', copiedSymbolId, 'to cell (', row, ',', col, ')');
+                
+                // Visual feedback
+                const originalBg = cell.style.backgroundColor;
+                cell.style.backgroundColor = '#cfe2ff'; // Light blue
+                setTimeout(() => {
+                    const rowSection = rowSections.find(section => row >= section.startRow && row <= section.endRow);
+                    if (rowSection) {
+                        const sectionIndex = rowSections.findIndex(section => row >= section.startRow && row <= section.endRow);
+                        const sectionBgColors = ['#dff0fa', '#ffe6f0', '#fff3e6', '#e6f7e6', '#f0e6ff', '#fff9e6'];
+                        cell.style.backgroundColor = sectionBgColors[sectionIndex % sectionBgColors.length];
+                    } else {
+                        cell.style.backgroundColor = originalBg;
+                    }
+                }, 200);
+            }
+        }
+    }
+    
+    // Drag-to-fill Functions
+    function handleCellMouseDown(e, cell, input, row, col) {
+        // Start drag if left mouse button is pressed and cell has a symbol OR is empty (for clearing)
+        if (e.button === 0) {
+            isDragging = true;
+            dragStartCell = cell;
+            dragSourceSymbolId = input.value; // can be empty string
+            draggedCells = [{ cell, input, row, col }];
+            
+            // Add visual indicator
+            cell.style.outline = '2px solid #0066cc';
+            
+            console.log('Drag started from cell (', row, ',', col, ') with symbol:', dragSourceSymbolId);
+            
+            // Prevent text selection during drag
+            e.preventDefault();
+        }
+    }
+    
+    function handleCellMouseEnter(e, cell, input, row, col) {
+        if (isDragging) {
+            // Check if this cell is not already in the dragged cells
+            const alreadyAdded = draggedCells.some(dc => dc.cell === cell);
+            if (!alreadyAdded) {
+                draggedCells.push({ cell, input, row, col });
+                
+                // Visual feedback - highlight the cell
+                cell.style.outline = '2px solid #0066cc';
+                
+                console.log('Drag over cell (', row, ',', col, ')');
+            }
+        }
+    }
+    
+    function handleCellMouseUp(e) {
+        if (isDragging && draggedCells.length > 1) {
+            // Apply the symbol to all dragged cells
+            console.log('Applying symbol to', draggedCells.length, 'cells');
+            
+            draggedCells.forEach(({ cell, input, row, col }) => {
+                input.value = dragSourceSymbolId;
+                updateCellDisplay(cell, dragSourceSymbolId);
+                
+                // Remove outline
+                cell.style.outline = '';
+                
+                // Brief flash to show it was filled or cleared
+                const originalBg = cell.style.backgroundColor;
+                if (dragSourceSymbolId === '' || dragSourceSymbolId == null) {
+                    cell.style.backgroundColor = '#fff8f8'; // Light red for clear
+                } else {
+                    cell.style.backgroundColor = '#d4edda'; // Light green for fill
+                }
+                setTimeout(() => {
+                    const rowSection = rowSections.find(section => row >= section.startRow && row <= section.endRow);
+                    if (rowSection) {
+                        const sectionIndex = rowSections.findIndex(section => row >= section.startRow && row <= section.endRow);
+                        const sectionBgColors = ['#dff0fa', '#ffe6f0', '#fff3e6', '#e6f7e6', '#f0e6ff', '#fff9e6'];
+                        cell.style.backgroundColor = sectionBgColors[sectionIndex % sectionBgColors.length];
+                    } else {
+                        cell.style.backgroundColor = originalBg;
+                    }
+                }, 300);
+            });
+            
+            console.log('Drag-fill completed');
+        } else if (isDragging) {
+            // Just clear the outline from the start cell
+            if (dragStartCell) {
+                dragStartCell.style.outline = '';
+            }
+        }
+        
+        // Reset drag state
+        isDragging = false;
+        dragStartCell = null;
+        draggedCells = [];
+        dragSourceSymbolId = null;
+    }
+    
+    // Add global mouseup listener to handle drag end even outside cells
+    document.addEventListener('mouseup', function(e) {
+        if (isDragging) {
+            handleCellMouseUp(e);
+        }
+    });
+    
+    // ======================
+    // OLD ROW REPEAT MODAL FUNCTIONS (DEPRECATED - NOW USING SECTION SYSTEM)
+    // The old single-row repeat system has been replaced with a hierarchical section-based system
+    // ======================
+    
+    // Modal event listeners
+    if (closeModal) closeModal.addEventListener('click', closeSymbolModal);
+    if (cancelModal) cancelModal.addEventListener('click', closeSymbolModal);
+    
+    // Prevent clicks inside modal content from closing the modal
+    const symbolModalContent = document.getElementById('symbolModalContent');
+    if (symbolModalContent) {
+        symbolModalContent.addEventListener('click', function(event) {
+            // Handle symbol selection BEFORE stopPropagation
+            const symbolOption = event.target.closest('.modal-symbol-option');
+            if (symbolOption && modal.style.display === 'block') {
+                handleSymbolSelection(symbolOption);
+            }
+            event.stopPropagation();
+        });
+    }
+    
+    // Close symbol modal when clicking outside (on backdrop)
+    if (modal) {
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                closeSymbolModal();
+            }
+        });
+    }
+    
+    // Symbol selection handler function
+    function handleSymbolSelection(symbolOption) {
+        if (symbolOption) {
+            console.log('Symbol option clicked:', symbolOption);
+            const symbolId = symbolOption.dataset.symbolId;
+            console.log('Symbol ID from dataset:', symbolId);
+            
+            if (currentCellInput && currentCellRow && currentCellCol) {
+                // Check if this is the problematic row 1, column 7
+                const isDebugCell = currentCellInput.name === 'cell_symbol_1_7';
+                if (isDebugCell) {
+                    console.warn('>>> SYMBOL SELECTED FOR ROW 1 COL 7!');
+                    console.warn('>>> Symbol ID:', symbolId);
+                }
+                
+                console.log('Setting hidden input value to:', symbolId);
+            currentCellInput.value = symbolId;
+            console.log('Hidden input value is now:', currentCellInput.value);
+            
+            // Use the stored currentCell reference directly instead of trying to find it by row/col
+            // This avoids issues with repeat rows collapsing the grid
+            if (currentCell && document.body.contains(currentCell)) {
+                console.log('Using stored cell reference for row', currentCellRow, 'col', currentCellCol);
+                console.log('Cell is in document?', document.body.contains(currentCell));
+                
+                if (isDebugCell) {
+                    console.warn('>>> Cell found in DOM:', currentCell);
+                    console.warn('>>> About to call updateCellDisplay');
+                }
+                
+                // Update the cell display
+                updateCellDisplay(currentCell, symbolId);
+                
+                if (isDebugCell) {
+                    console.warn('>>> After updateCellDisplay, cell innerHTML:', currentCell.innerHTML);
+                }
+            } else {
+                console.error('Could not find cell - currentCell is invalid or not in DOM');
+            }
+            
+            console.log('Cell updated, closing modal');
+            closeSymbolModal();
+        } else {
+            console.error('No current cell input or row/col available', { currentCellInput, currentCellRow, currentCellCol });
+        }
+    }
+}
+});
+</script>
+
+{% endblock %}

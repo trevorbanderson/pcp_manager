@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Add Level of Difficulty{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Add Level of Difficulty</h2>
+</div>
+<form method="post" enctype="multipart/form-data">
+    <div class="form-group">
+        <label for="name">Name</label>
+        <input type="text" class="form-control" id="name" name="name" required>
+    </div>
+    <div class="form-group">
+        <label for="seq">Sequence</label>
+        <input type="number" class="form-control" id="seq" name="seq" required>
+    </div>
+    <div class="form-group">
+        <label for="symbol">Symbol (JPEG, optional)</label>
+        <input type="file" class="form-control" id="symbol" name="symbol" accept="image/jpeg">
+        <div style="font-size: 0.9em; color: #888;">JPEG only. 48x48 or 64x64px for best results.</div>
+    </div>
+    <div class="form-group">
+        <label for="is_active">Active?</label>
+        <input type="checkbox" id="is_active" name="is_active" value="1" checked>
+    </div>
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ current_user.full_name }} at (auto-set on save)</p>
+    <button type="submit" class="btn btn-primary">Add</button>
+    <a href="{{ url_for('level_of_difficulty_list') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

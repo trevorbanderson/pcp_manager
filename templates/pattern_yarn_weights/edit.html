@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Pattern Yarn Weight{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 15px;">
+    <h2 style="margin: 0; display: inline-block;">Edit Pattern Yarn Weight</h2>
+    <a href="{{ url_for('pattern_yarn_weights_list') }}" class="btn btn-secondary" style="float: right;">Back to List</a>
+</div>
+
+<form method="POST">
+    <div style="margin-bottom: 8px;">
+        <label for="pattern_id" style="display: block; margin-bottom: 3px;">Pattern:</label>
+        <select id="pattern_id" name="pattern_id" required style="padding: 4px 8px; width: 300px;">
+            {% for pattern in patterns %}
+            <option value="{{ pattern['id'] }}" {% if pattern['id'] == pattern_yarn_weight['pattern_id'] %}selected{% endif %}>
+                {{ pattern['name'] }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="margin-bottom: 8px;">
+        <label for="yarn_weight_id" style="display: block; margin-bottom: 3px;">Yarn Weight:</label>
+        <select id="yarn_weight_id" name="yarn_weight_id" required style="padding: 4px 8px; width: 300px;">
+            {% for yarn_weight in yarn_weights %}
+            <option value="{{ yarn_weight['id'] }}" {% if yarn_weight['id'] == pattern_yarn_weight['yarn_weight_id'] %}selected{% endif %}>
+                {{ yarn_weight['weight_name'] }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ get_full_name(pattern_yarn_weight.created_by) }} at {{ pattern_yarn_weight.created_at | fmt_dt }}</p>
+    <div style="margin-top: 12px; display: flex; gap: 8px; align-items: center;">
+        <button type="submit" class="btn btn-primary btn-sm">Update</button>
+        <a href="{{ url_for('pattern_yarn_weights_list') }}" class="btn btn-secondary btn-sm">Cancel</a>
+        <form method="POST" action="{{ url_for('pattern_yarn_weights_delete', id=pattern_yarn_weight['id']) }}" style="display: inline; margin:0;">
+            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this pattern yarn weight?');">Delete</button>
+        </form>
+    </div>
+</form>
+{% endblock %}

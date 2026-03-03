@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Create Piece{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Create Piece</h2>
+</div>
+<form method="POST" class="form">
+    <div class="form-group">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" maxlength="100" required>
+    </div>
+    <div class="form-group">
+        <label for="description">Description:</label>
+        <textarea id="description" name="description" maxlength="500" rows="2"></textarea>
+    </div>
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ current_user.full_name }} at (auto-set on save)</p>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-sm">Create</button>
+        <a href="{{ url_for('pieces_list') }}" class="btn">Cancel</a>
+    </div>
+</form>
+{% endblock %}

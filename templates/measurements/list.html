@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Measurements{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Measurements</h2>
+    <a href="{{ url_for('measurements_create') }}" class="btn btn-primary" style="height:40px;display:inline-flex;align-items:center;">Add New</a>
+</div>
+
+<form method="get" style="margin-bottom: 18px; display: flex; gap: 16px; align-items: flex-end;">
+    <div>
+        <label for="age_id">Age Group:</label>
+        <select name="age_id" id="age_id">
+            <option value="">All</option>
+            {% for age in ages %}
+                <option value="{{ age['id'] }}" {% if selected_age_id == age['id']|string %}selected{% endif %}>{{ age['name'] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label for="body_part_id">Body Part:</label>
+        <select name="body_part_id" id="body_part_id">
+            <option value="">All</option>
+            {% for bp in body_parts %}
+                <option value="{{ bp['id'] }}" {% if selected_body_part_id == bp['id']|string %}selected{% endif %}>{{ bp['name'] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label for="gender_id">Gender:</label>
+        <select name="gender_id" id="gender_id">
+            <option value="">All</option>
+            {% for g in genders %}
+                <option value="{{ g['id'] }}" {% if selected_gender_id == g['id']|string %}selected{% endif %}>{{ g['name'] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary" style="height:40px;display:inline-flex;align-items:center;">Filter</button>
+    {% if selected_age_id or selected_body_part_id or selected_gender_id %}
+        <a href="{{ url_for('measurements_list') }}" class="btn" style="height:40px;display:inline-flex;align-items:center;">Clear</a>
+    {% endif %}
+</form>
+
+{% if measurements %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th title="Primary key for the measurement">ID</th>
+            <th title="Name of the body part being measured">Body Part</th>
+            <th title="Age group for the measurement e.g. 3 mo, 16, Adult">Age Group</th>
+            <th title="Size for the measurement">Size</th>
+            <th title="Size abbreviation">Abbr</th>
+            <th title="Gender for the measurement e.g. Male, Female, Unisex">Gender</th>
+            <th style="text-align: right;" title="Measurement in inches">Measurement</th>
+            <th title="User who added the measurement">Updated By</th>
+            <th title="The time when the measurement was added to the database">Updated At</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for measurement in measurements %}
+        <tr>
+            <td>{{ measurement['id'] }}</td>
+            <td>{{ measurement['body_part_name'] }}</td>
+            <td>{{ measurement['age_name'] }}</td>
+            <td>{{ measurement['size_name'] }}</td>
+            <td>{{ measurement['size_abbreviation'] or '' }}</td>
+            <td>{{ measurement['gender_name'] or 'N/A' }}</td>
+            <td style="text-align: right; color: #0066cc; font-weight: 500;">{{ measurement['measurement'] }}</td>
+            <td>{{ measurement['created_by'] }}</td>
+            <td>{{ measurement['created_at'].strftime('%Y-%m-%d %H:%M') if measurement['created_at'] else '' }}</td>
+            <td class="actions">
+                <a href="{{ url_for('measurements_edit', id=measurement['id']) }}" class="btn btn-sm">Edit</a>
+                <form method="POST" action="{{ url_for('measurements_delete', id=measurement['id']) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this measurement?');">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No measurements found. <a href="{{ url_for('measurements_create') }}">Add the first one!</a></p>
+{% endif %}
+{% endblock %}

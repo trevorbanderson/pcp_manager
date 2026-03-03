@@ -1,0 +1,2 @@
+# This file keeps the logs/ directory in source control.
+# Actual log files (*.log, *.log.*) are excluded via .gitignore.

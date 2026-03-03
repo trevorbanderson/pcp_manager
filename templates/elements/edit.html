@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Element{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 15px;">
+    <h2 style="margin: 0;">Edit Element</h2>
+</div>
+
+<form method="POST" enctype="multipart/form-data" style="max-width: 600px;">
+    <div style="margin-bottom: 8px;">
+        <label for="symbol" style="display: block; margin-bottom: 3px;">Symbol Image:</label>
+        <input type="file" id="symbol" name="symbol" accept="image/*" style="padding: 4px 8px;">
+        <small style="display: block; margin-top: 2px;">Upload a new image to replace the existing symbol (optional)</small>
+        {% if element.symbol %}
+        <div style="margin-top: 5px;">
+            <strong>Current symbol:</strong>
+            <img src="data:image/png;base64,{{ element.symbol | b64encode }}" 
+                 alt="{{ element.ascii_symbol }}" 
+                 style="width: 48px; height: 48px; background-color: white; padding: 5px; margin-left: 10px;">
+        </div>
+        {% endif %}
+    </div>
+    
+    <div style="margin-bottom: 8px;">
+        <label for="ascii_symbol" style="display: block; margin-bottom: 3px;">ASCII Symbol:</label>
+        <input type="text" id="ascii_symbol" name="ascii_symbol" maxlength="1" value="{{ element.ascii_symbol }}" style="width: 60px; padding: 4px 8px;" required>
+        <small style="display: block; margin-top: 2px;">Single character representation</small>
+    </div>
+    
+    <div style="margin-bottom: 8px;">
+        <label for="description" style="display: block; margin-bottom: 3px;">Description:</label>
+        <textarea id="description" name="description" maxlength="500" rows="2" style="width: 100%; max-width: 500px; padding: 4px 8px;">{{ element.description or '' }}</textarea>
+    </div>
+    
+    <div style="margin-bottom: 8px;">
+        <label for="abbrieviation" style="display: block; margin-bottom: 3px;">Abbreviation:</label>
+        <input type="text" id="abbrieviation" name="abbrieviation" maxlength="10" value="{{ element.abbrieviation or '' }}" style="width: 120px; padding: 4px 8px;">
+    </div>
+    
+    <div style="margin-bottom: 12px;">
+        <label for="type" style="display: block; margin-bottom: 3px;">Type:</label>
+        <select id="type" name="type" style="width: 180px; padding: 4px 8px;" required>
+            <option value="">Select type...</option>
+            <option value="stitch" {% if element.type == 'stitch' %}selected{% endif %}>Stitch</option>
+            <option value="description" {% if element.type == 'description' %}selected{% endif %}>Description</option>
+            <option value="measurement" {% if element.type == 'measurement' %}selected{% endif %}>Measurement</option>
+            <option value="instruction" {% if element.type == 'instruction' %}selected{% endif %}>Instruction</option>
+        </select>
+    </div>
+    
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ get_full_name(element.created_by) }} at {{ element.created_at | fmt_dt }}</p>
+    <div>
+        <button type="submit" class="btn btn-primary btn-sm">Update</button>
+        <a href="{{ url_for('elements_list') }}" class="btn btn-secondary btn-sm">Cancel</a>
+    </div>
+</form>
+{% endblock %}

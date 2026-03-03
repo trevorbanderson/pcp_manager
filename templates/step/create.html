@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Create Step{% endblock %}
+{% block content %}
+<div style="margin-bottom: 15px;">
+    <h2 style="margin: 0; display: inline-block;">Create Step</h2>
+    <a href="{{ url_for('step_list') }}" class="btn btn-secondary" style="float: right;">Back to List</a>
+</div>
+<form method="POST">
+    <div style="display: flex; flex-direction: column; gap: 14px; max-width: 700px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <label for="phase_seq" style="width: 180px;">Phase Seq:</label>
+            <input type="number" id="phase_seq" name="phase_seq" required style="padding: 4px 8px; width: 220px; height: 36px;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <label for="phase_desc" style="width: 180px;">Phase Desc:</label>
+            <input type="text" id="phase_desc" name="phase_desc" required style="padding: 4px 8px; width: 220px; height: 36px;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <label for="group_seq" style="width: 180px;">Group Seq:</label>
+            <input type="number" id="group_seq" name="group_seq" style="padding: 4px 8px; width: 220px; height: 36px;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <label for="group_desc" style="width: 180px;">Group Desc:</label>
+            <input type="text" id="group_desc" name="group_desc" style="padding: 4px 8px; width: 220px; height: 36px;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <label for="step_seq" style="width: 180px;">Step Seq:</label>
+            <input type="number" id="step_seq" name="step_seq" required style="padding: 4px 8px; width: 220px; height: 36px;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <label for="step_desc" style="width: 180px;">Step Desc:</label>
+            <input type="text" id="step_desc" name="step_desc" style="padding: 4px 8px; width: 220px; height: 36px;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <label for="step_sql" style="width: 180px;">Step SQL:</label>
+            <textarea id="step_sql" name="step_sql" style="padding: 4px 8px; width: 400px; height: 80px;"></textarea>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <label for="is_active" style="width: 180px;">Is Active:</label>
+            <select id="is_active" name="is_active" style="width: 120px; height: 36px;">
+                <option value="true">True</option>
+                <option value="false">False</option>
+            </select>
+        </div>
+        <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ current_user.full_name }} at (auto-set on save)</p>
+    </div>
+    <div style="margin-top: 18px;">
+        <button type="submit" class="btn btn-primary btn-sm">Create</button>
+        <a href="{{ url_for('step_list') }}" class="btn btn-secondary btn-sm">Cancel</a>
+    </div>
+</form>
+{% endblock %}

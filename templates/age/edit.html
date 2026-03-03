@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Edit Age{% endblock %}
+{% block content %}
+<div class="page-header"><h2>Edit Age</h2></div>
+<form method="POST" style="max-width:400px;">
+    <div style="margin-bottom:8px;">
+        <label for="name">Age Name:</label>
+        <input type="text" id="name" name="name" maxlength="50" value="{{ age['name'] }}" style="width:200px;" required>
+    </div>
+    <div style="margin-bottom:8px;">
+        <label for="abbreviation">Abbreviation:</label>
+        <input type="text" id="abbreviation" name="abbreviation" maxlength="20" value="{{ age['abbreviation'] }}" style="width:120px;">
+    </div>
+    <div style="margin-bottom:8px;">
+        <label for="seq">Sequence:</label>
+        <input type="number" id="seq" name="seq" value="{{ age['seq'] }}" style="width:80px;">
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{{ url_for('age_list') }}" class="btn">Cancel</a>
+</form>
+{% endblock %}

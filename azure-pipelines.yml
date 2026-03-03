@@ -1,0 +1,135 @@
+pool:
+  vmImage: 'ubuntu-latest'
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    exclude:
+      - '*.md'
+      - '.env'
+      - 'logs/**'
+
+variables:
+  azureSubscriptionDev:  'AgileInnovationsARMConnection'
+  azureSubscriptionProd: 'AgileInnovationsARMConnectionPROD'
+  location:              'eastus2'
+  registryName:          'agileinnovations'
+  containerRegistry:     'agileinnovations.azurecr.io'
+  imageName:             'pcp-manager'
+  keyVaultName:          'AKV-AgileInnovations-Dev'
+  envName:               'pcp-containers'
+  devResourceGroup:      'Dev'
+  prodResourceGroup:     'Prod'
+  dbHost:                'pcpdb.postgres.database.azure.com'
+
+stages:
+
+# ── 1. Build & push Docker image ─────────────────────────────────────────
+- stage: Build
+  displayName: 'Build & Push Image'
+  jobs:
+  - job: BuildImage
+    displayName: 'ACR remote build + push'
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: 'az acr build → $(imageName):$(Build.BuildId)'
+      inputs:
+        azureSubscription: '$(azureSubscriptionDev)'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -e
+          # Use absolute paths so ACR picks up the correct Dockerfile regardless of cwd
+          az acr build \
+            --registry $(registryName) \
+            --image $(imageName):$(Build.BuildId) \
+            --image $(imageName):latest \
+            --file $(Build.SourcesDirectory)/Dockerfile \
+            $(Build.SourcesDirectory)
+
+# ── 2. Deploy to Staging ──────────────────────────────────────────────────
+- stage: Staging
+  displayName: 'Deploy to Staging'
+  dependsOn: Build
+  jobs:
+  - job: DeployStaging
+    displayName: 'Bicep deploy → Dev resource group'
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: 'az deployment group create (staging)'
+      inputs:
+        azureSubscription: '$(azureSubscriptionDev)'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -e
+          REGISTRY_PASSWORD=$(az acr credential show \
+            --name $(registryName) \
+            --query passwords[0].value -o tsv)
+
+          az deployment group create \
+            --resource-group $(devResourceGroup) \
+            --template-file bicep/pcp-manager.bicep \
+            --parameters \
+                location="$(location)" \
+                envName="$(envName)" \
+                environment="staging" \
+                imageTag="$(Build.BuildId)" \
+                keyVaultName="$(keyVaultName)" \
+                dbHost="$(dbHost)" \
+                registryPassword="$REGISTRY_PASSWORD"
+
+# ── 3. Manual approval gate ───────────────────────────────────────────────
+- stage: ManualApproval
+  displayName: 'Manual Approval Before Prod'
+  dependsOn: Staging
+  jobs:
+  - job: WaitForApproval
+    displayName: 'Wait for approval'
+    pool: server
+    steps:
+    - task: ManualValidation@0
+      timeoutInMinutes: 60
+      inputs:
+        notifyUsers: ''
+        instructions: 'Staging looks good? Approve to deploy pcp-manager to Production.'
+
+# ── 4. Deploy to Prod ─────────────────────────────────────────────────────
+- stage: Prod
+  displayName: 'Deploy to Prod'
+  dependsOn: ManualApproval
+  jobs:
+  - job: DeployProd
+    displayName: 'Bicep deploy → Prod resource group'
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: 'az deployment group create (prod)'
+      inputs:
+        azureSubscription: '$(azureSubscriptionProd)'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -e
+          REGISTRY_PASSWORD=$(az acr credential show \
+            --name $(registryName) \
+            --query passwords[0].value -o tsv)
+
+          az deployment group create \
+            --resource-group $(prodResourceGroup) \
+            --template-file bicep/pcp-manager.bicep \
+            --parameters \
+                location="$(location)" \
+                envName="$(envName)" \
+                environment="prod" \
+                imageTag="$(Build.BuildId)" \
+                keyVaultName="$(keyVaultName)" \
+                dbHost="$(dbHost)" \
+                registryPassword="$REGISTRY_PASSWORD"

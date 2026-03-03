@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Create Pattern Category{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 15px;">
+    <h2 style="margin: 0;">Create Pattern Category</h2>
+</div>
+
+<form method="POST" style="max-width: 600px;">
+    <div style="margin-bottom: 8px;">
+        <label for="sub_category" style="display: block; margin-bottom: 3px;">Sub-Category:</label>
+        <input type="text" id="sub_category" name="sub_category" maxlength="50" style="width: 250px; padding: 4px 8px;" required>
+    </div>
+    
+    <div style="margin-bottom: 8px;">
+        <label for="category" style="display: block; margin-bottom: 3px;">Category:</label>
+        <input type="text" id="category" name="category" maxlength="50" style="width: 250px; padding: 4px 8px;" required>
+    </div>
+    
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ current_user.full_name }} at (auto-set on save)</p>
+    <div>
+        <button type="submit" class="btn btn-primary btn-sm">Create</button>
+        <a href="{{ url_for('pattern_categories_list') }}" class="btn btn-secondary btn-sm">Cancel</a>
+    </div>
+</form>
+{% endblock %}

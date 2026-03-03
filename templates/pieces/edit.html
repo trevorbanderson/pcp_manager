@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Edit Piece{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Edit Piece</h2>
+</div>
+<form method="POST" class="form">
+    <div class="form-group">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" maxlength="100" value="{{ piece.name }}" required>
+    </div>
+    <div class="form-group">
+        <label for="description">Description:</label>
+        <textarea id="description" name="description" maxlength="500" rows="2">{{ piece.description }}</textarea>
+    </div>
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ get_full_name(piece.created_by) }} at {{ piece.created_at | fmt_dt }}</p>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-sm">Update</button>
+        <a href="{{ url_for('pieces_list') }}" class="btn btn-secondary btn-sm">Cancel</a>
+    </div>
+</form>
+{% endblock %}

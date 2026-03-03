@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Create Element{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 15px;">
+    <h2 style="margin: 0;">Create Element</h2>
+</div>
+
+<form method="POST" enctype="multipart/form-data" style="max-width: 600px;">
+    <div style="margin-bottom: 8px;">
+        <label for="symbol" style="display: block; margin-bottom: 3px;">Symbol Image:</label>
+        <input type="file" id="symbol" name="symbol" accept="image/*" style="padding: 4px 8px;">
+        <small style="display: block; margin-top: 2px;">Upload an image for the element symbol</small>
+    </div>
+    
+    <div style="margin-bottom: 8px;">
+        <label for="ascii_symbol" style="display: block; margin-bottom: 3px;">ASCII Symbol:</label>
+        <input type="text" id="ascii_symbol" name="ascii_symbol" maxlength="1" style="width: 60px; padding: 4px 8px;" required>
+        <small style="display: block; margin-top: 2px;">Single character representation</small>
+    </div>
+    
+    <div style="margin-bottom: 8px;">
+        <label for="description" style="display: block; margin-bottom: 3px;">Description:</label>
+        <textarea id="description" name="description" maxlength="500" rows="2" style="width: 100%; max-width: 500px; padding: 4px 8px;"></textarea>
+    </div>
+    
+    <div style="margin-bottom: 8px;">
+        <label for="abbrieviation" style="display: block; margin-bottom: 3px;">Abbreviation:</label>
+        <input type="text" id="abbrieviation" name="abbrieviation" maxlength="10" style="width: 120px; padding: 4px 8px;">
+    </div>
+    
+    <div style="margin-bottom: 8px;">
+        <label for="type" style="display: block; margin-bottom: 3px;">Type:</label>
+        <select id="type" name="type" style="width: 180px; padding: 4px 8px;" required>
+            <option value="">Select type...</option>
+            <option value="stitch">Stitch</option>
+            <option value="description">Description</option>
+            <option value="measurement">Measurement</option>
+            <option value="instruction">Instruction</option>
+        </select>
+    </div>
+    
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ current_user.full_name }} at (auto-set on save)</p>
+    <div>
+        <button type="submit" class="btn btn-primary btn-sm">Create</button>
+        <a href="{{ url_for('elements_list') }}" class="btn">Cancel</a>
+    </div>
+</form>
+{% endblock %}

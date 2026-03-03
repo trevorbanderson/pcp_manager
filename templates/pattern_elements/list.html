@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Pattern Elements{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Pattern Elements</h2>
+    <a href="{{ url_for('pattern_elements_create') }}" class="btn btn-primary">Add New</a>
+</div>
+
+{% if pattern_elements %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th title="Primary key for the relationship between pattern and element">ID</th>
+            <th title="Pattern Key">Pattern</th>
+            <th title="Element Type">Type</th>
+            <th title="Element Symbol">Symbol</th>
+            <th title="Element Description">Description</th>
+            <th title="Element Abbreviation">Abbreviation</th>
+            <th title="User who created the pattern element entry">Updated By</th>
+            <th title="The time when the pattern element was added to the database">Updated At</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for pe in pattern_elements %}
+        <tr>
+            <td>{{ pe['id'] }}</td>
+            <td>{{ pe['pattern_name'] }}</td>
+            <td>{{ pe['element_type'] }}</td>
+            <td>
+                {% if pe['element_symbol'] %}
+                    <img src="data:image/png;base64,{{ pe['element_symbol'] | b64encode }}" alt="symbol" style="width: 24px; height: 24px; background-color: white; padding: 2px;">
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+            <td>{{ pe['element_description'] }}</td>
+            <td>{{ pe['element_abbrieviation'] }}</td>
+            <td>{{ pe['created_by'] }}</td>
+            <td>{{ pe['created_at'].strftime('%Y-%m-%d %H:%M') if pe['created_at'] else '' }}</td>
+            <td class="actions">
+                <a href="{{ url_for('pattern_elements_edit', id=pe['id']) }}" class="btn btn-sm">Edit</a>
+                <form method="POST" action="{{ url_for('pattern_elements_delete', id=pe['id']) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this pattern element?');">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No pattern elements found. <a href="{{ url_for('pattern_elements_create') }}">Add the first one!</a></p>
+{% endif %}
+{% endblock %}

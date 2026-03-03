@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Pattern Category{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 15px;">
+    <h2 style="margin: 0;">Edit Pattern Category</h2>
+</div>
+
+<form method="POST">
+    <div style="margin-bottom: 8px;">
+        <label for="sub_category" style="display: block; margin-bottom: 3px;">Sub-Category:</label>
+        <input type="text" id="sub_category" name="sub_category" value="{{ category.sub_category }}" maxlength="50" required style="padding: 4px 8px; width: 250px;">
+    </div>
+    
+    <div style="margin-bottom: 8px;">
+        <label for="category" style="display: block; margin-bottom: 3px;">Category:</label>
+        <input type="text" id="category" name="category" value="{{ category.category }}" maxlength="50" required style="padding: 4px 8px; width: 250px;">
+    </div>
+    
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ get_full_name(category.created_by) }} at {{ category.created_at | fmt_dt }}</p>
+    <div style="margin-top: 12px;">
+        <button type="submit" class="btn btn-primary btn-sm">Update</button>
+        <a href="{{ url_for('pattern_categories_list') }}" class="btn btn-secondary btn-sm">Cancel</a>
+    </div>
+</form>
+{% endblock %}

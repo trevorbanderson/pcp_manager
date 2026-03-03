@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Patterns{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Patterns</h2>
+    <a href="{{ url_for('patterns_create') }}" class="btn btn-primary">Add Pattern</a>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th title="Primary key for the knitting pattern">ID</th>
+            <th title="Name of the knitting pattern">Name</th>
+            <th title="Detailed description of the knitting pattern" style="min-width: 350px; max-width: 600px; width: 40vw;">Description</th>
+            <th title="Category and sub-category of the knitting pattern">Category</th>
+            <th title="Skill level required i.e. Basic, Easy, Intermediate, Complex">Difficulty</th>
+            <th title="Yarn weight recommended for this pattern">Yarn Weight</th>
+            <th title="Pattern Picture 1">Picture 1</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if patterns %}
+        {% for pattern in patterns %}
+        <tr>
+            <td>{{ pattern.id }}</td>
+            <td>{{ pattern.name }}</td>
+            <td style="min-width: 350px; max-width: 600px; width: 40vw;">{{ pattern.description }}</td>
+            <td>{{ pattern.category or 'N/A' }} - {{ pattern.sub_category or 'N/A' }}</td>
+            <td>{{ pattern.difficulty_name or 'N/A' }}</td>
+            <td>{{ pattern.yarn_weight_name or 'Not specified' }}</td>
+            <td>
+                {% set pic_url = url_for('pattern_picture', id=pattern.id, pic=1) %}
+                <div class="schematic-thumb-wrapper" style="display: inline-block; position: relative;">
+                    <a href="{{ pic_url }}" target="_blank" title="View Picture 1">
+                        <img src="{{ pic_url }}" alt="Picture 1" class="schematic-thumb" style="width: 48px; height: 48px; object-fit: cover; border: 1px solid #ccc; border-radius: 4px; vertical-align: middle;" onerror="this.style.display='none'" />
+                    </a>
+                    <div class="schematic-popout" style="display: none; position: absolute; left: 60px; top: -10px; z-index: 10; background: #fff; border: 1px solid #aaa; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); padding: 6px;">
+                        <img src="{{ pic_url }}" alt="Picture 1 Large" style="max-width: 240px; max-height: 240px; display: block;" onerror="this.style.display='none'" />
+                    </div>
+                </div>
+            </td>
+            <td class="actions">
+                <a href="{{ url_for('patterns_edit', id=pattern.id) }}" class="btn btn-sm">Edit</a>
+                <form method="POST" action="{{ url_for('patterns_delete', id=pattern.id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+            <td colspan="8" style="text-align: center; padding: 20px; color: #666;">
+                {% if total_patterns and total_patterns > 0 %}
+                <strong>No Active Patterns Found</strong><br>
+                There are {{ total_patterns }} pattern(s) in the database, but none are marked as active.<br>
+                <small>Active patterns are the ones that appear in this list. You can edit existing patterns to mark them as active.</small><br><br>
+                {% else %}
+                <strong>No Patterns Found</strong><br>
+                No patterns exist in the database yet.<br><br>
+                {% endif %}
+                <a href="{{ url_for('patterns_create') }}" class="btn btn-sm btn-primary">Create New Pattern</a>
+            </td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>
+{% endblock %}

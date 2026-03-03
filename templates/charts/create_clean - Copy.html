@@ -1,0 +1,661 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header" style="margin-bottom: 15px;">
+    <h2 style="margin: 0;">{% if edit_mode %}Edit Chart{% else %}Create Chart{% endif %}</h2>
+</div>
+
+<form method="POST" style="width: 100%; max-width: none; text-align: left;" id="chartForm">
+    <input type="hidden" name="pattern_id" value="{{ pattern_id }}">
+    
+    <div style="margin-bottom: 8px;">
+        <label for="name" style="display: block; margin-bottom: 3px;">Chart Name:</label>
+        <input type="text" id="name" name="name" style="width: 300px; padding: 4px 8px;" required value="{% if edit_mode %}{{ chart.name }}{% endif %}" autocomplete="off">
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 180px 180px 180px 1fr; gap: 8px; margin-bottom: 0; justify-items: start; align-items: start;">
+        <!-- Row 1: Piece, Age Group, Size, Description -->
+        <div style="display: flex; flex-direction: column; align-items: stretch; width: 100%;">
+            <label for="piece_id" style="display: block; margin-bottom: 0;">Piece:</label>
+            <select id="piece_id" name="piece_id" style="width: 100%; height: 38px; padding: 4px 8px; margin-bottom: 0; box-sizing: border-box;" required autocomplete="off">
+                <option value="">Select Piece</option>
+                {% for piece in pieces %}
+                <option value="{{ piece.id }}"{% if edit_mode and chart.piece_id == piece.id %} selected{% endif %}>{{ piece.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: stretch; width: 100%;">
+            <label for="age_id" style="display: block; margin-bottom: 0;">Age Group:</label>
+            <select id="age_id" name="age_id" style="width: 100%; height: 38px; padding: 4px 8px; margin-bottom: 0; box-sizing: border-box;" required autocomplete="off">
+                <option value="">Select Age</option>
+                {% for age in ages %}
+                <option value="{{ age.id }}"{% if edit_mode and chart.age_id == age.id %} selected{% endif %}>{{ age.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: stretch; width: 100%;">
+            <label for="size_id" style="display: block; margin-bottom: 0;">Size:</label>
+            <select id="size_id" name="size_id" style="width: 100%; height: 38px; padding: 4px 8px; margin-bottom: 0; box-sizing: border-box;" required autocomplete="off">
+                <option value="">Select Size</option>
+                {% for size in sizes %}
+                <option value="{{ size.id }}"{% if edit_mode and chart.size_id == size.id %} selected{% endif %}>{{ size.abbreviation or size.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: stretch; width: 100%;">
+            <label for="description" style="display: block; margin-bottom: 3px; vertical-align: top;">Description:</label>
+            <textarea id="description" name="description" style="width: 100%; height: 38px; min-height: 38px; max-height: 38px; padding: 4px 8px; resize: both; vertical-align: top; box-sizing: border-box;">{% if edit_mode %}{{ chart.description or '' }}{% endif %}</textarea>
+        </div>
+        <!-- Row 2: Gender, Instructions (aligned under Description) -->
+        <div style="display: flex; flex-direction: column; align-items: stretch; width: 100%; grid-column: 1;">
+            <label for="gender_id" style="display: block; margin-bottom: 2px; margin-top: 2px;">Gender:</label>
+            <select id="gender_id" name="gender_id" style="width: 100%; height: 38px; padding: 4px 8px; margin-bottom: 0; box-sizing: border-box;" required autocomplete="off">
+                <option value="">Select Gender</option>
+                {% for gender in genders %}
+                <option value="{{ gender.id }}"{% if edit_mode and chart.gender_id == gender.id %} selected{% endif %}>{{ gender.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="grid-column: 4; display: flex; flex-direction: column; align-items: stretch; width: 100%;">
+            <label for="instructions" style="display: block; margin-bottom: 3px;">Instructions:</label>
+            <textarea id="instructions" name="instructions" maxlength="100" rows="2" style="width: 100%; height: 38px; min-height: 38px; max-height: 38px; padding: 4px 8px; resize: both; vertical-align: top; box-sizing: border-box;" autocomplete="off">{% if edit_mode %}{{ chart.instructions or '' }}{% endif %}</textarea>
+        </div>
+    </div>
+    ...existing code from create_fixed.html...
+        <div style="display: flex; flex-direction: column; align-items: stretch; width: 100%;">
+            <label for="description" style="display: block; margin-bottom: 3px; vertical-align: top;">Description:</label>
+            <textarea id="description" name="description" style="width: 100%; height: 38px; min-height: 38px; max-height: 38px; padding: 4px 8px; resize: both; vertical-align: top; box-sizing: border-box;">{% if edit_mode %}{{ chart.description or '' }}{% endif %}</textarea>
+        </div>
+        <!-- Row 2: Gender, Instructions (aligned under Description) -->
+        <div style="display: flex; flex-direction: column; align-items: stretch; width: 100%; grid-column: 1;">
+            <label for="gender_id" style="display: block; margin-bottom: 2px; margin-top: 2px;">Gender:</label>
+            <select id="gender_id" name="gender_id" style="width: 100%; height: 38px; padding: 4px 8px; margin-bottom: 0; box-sizing: border-box;" required autocomplete="off">
+                <option value="">Select Gender</option>
+                {% for gender in genders %}
+                <option value="{{ gender.id }}"{% if edit_mode and chart.gender_id == gender.id %} selected{% endif %}>{{ gender.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="grid-column: 4; display: flex; flex-direction: column; align-items: stretch; width: 100%;">
+            <label for="instructions" style="display: block; margin-bottom: 3px;">Instructions:</label>
+            <textarea id="instructions" name="instructions" maxlength="100" rows="2" style="width: 100%; height: 38px; min-height: 38px; max-height: 38px; padding: 4px 8px; resize: both; vertical-align: top; box-sizing: border-box;" autocomplete="off">{% if edit_mode %}{{ chart.instructions or '' }}{% endif %}</textarea>
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; justify-items: start; align-items: start;">
+        <div>
+            <label for="num_rows" style="display: block; margin-bottom: 3px;">Rows:</label>
+            <input type="number" id="num_rows" name="num_rows" min="1" style="width: 80px; padding: 4px 8px;" required value="{% if edit_mode %}{{ chart.num_rows }}{% else %}10{% endif %}" autocomplete="off">
+        </div>
+        
+        <div>
+            <label for="num_columns" style="display: block; margin-bottom: 3px;">Columns:</label>
+            <input type="number" id="num_columns" name="num_columns" min="1" style="width: 80px; padding: 4px 8px;" required value="{% if edit_mode %}{{ chart.num_columns }}{% else %}10{% endif %}" autocomplete="off">
+        </div>
+        
+        <div>
+            <label for="repeat_column_start" style="display: block; margin-bottom: 3px;">Repeat Start:</label>
+            <input type="number" id="repeat_column_start" name="repeat_column_start" min="1" style="width: 80px; padding: 4px 8px;" value="{% if edit_mode and chart.repeat_column_start %}{{ chart.repeat_column_start }}{% endif %}" autocomplete="off">
+        </div>
+        
+        <div>
+            <label for="repeat_column_end" style="display: block; margin-bottom: 3px;">Repeat End:</label>
+            <input type="number" id="repeat_column_end" name="repeat_column_end" min="1" style="width: 80px; padding: 4px 8px;" value="{% if edit_mode and chart.repeat_column_end %}{{ chart.repeat_column_end }}{% endif %}" autocomplete="off">
+            <div style="font-size: 11px; color: #666; margin-top: 2px;">Must be greater than start</div>
+        </div>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+        <label id="chart-grid-label" style="display: block; margin-bottom: 3px;">Chart Grid:</label>
+        <div id="chart-grid-container" style="display: inline-block; position: relative;" aria-labelledby="chart-grid-label" role="grid">
+            <table id="chart-grid" style="border-collapse: collapse;" role="presentation">
+                <!-- Grid will be rendered here -->
+            </table>
+            <div id="resize-handle" style="position: absolute; right: 0; bottom: 0; width: 20px; height: 20px; background: #d0d0d0; border: 2px solid #999; border-radius: 4px; cursor: se-resize; display: flex; align-items: center; justify-content: center; z-index: 10; font-weight: bold;" aria-label="Resize grid by dragging">
+                <span style="font-size: 14px; color: #555; user-select: none; line-height: 1;" aria-hidden="true">⇘</span>
+            </div>
+        </div>
+        <div style="font-size: 12px; color: #888; margin-top: 2px;">Click grid cells to select symbols. Drag the corner to resize grid.</div>
+    </div>
+
+    <!-- Instructions field moved under Description above -->
+    
+    <div style="margin-bottom: 12px;">
+        <label for="created_by" style="display: block; margin-bottom: 3px;">Updated By:</label>
+        <input type="text" id="created_by" name="created_by" value="{% if edit_mode %}{{ chart.created_by or 'admin' }}{% else %}admin{% endif %}" style="width: 150px; padding: 4px 8px;" autocomplete="off">
+    </div>
+    
+    <div>
+        <button type="submit" class="btn btn-primary btn-sm" style="height:32px;">{% if edit_mode %}Update Chart{% else %}Create Chart{% endif %}</button>
+        <a href="{{ url_for('charts_list', pattern_id=pattern_id) }}" class="btn btn-sm" style="height:32px; line-height: 22px;">Cancel</a>
+    </div>
+</form>
+
+<!-- Symbol Selection Modal -->
+<div id="symbolModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+    <div style="background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h4 style="margin: 0;">Select Symbol for Cell</h4>
+            <button id="closeModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #aaa;">&times;</button>
+        </div>
+        
+        <div id="modalSymbolGrid" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; max-height: 400px; overflow-y: auto; margin-bottom: 16px;">
+            <!-- Empty/Clear option -->
+            <div class="modal-symbol-option" data-symbol-id="" style="width: 60px; height: 60px; border: 2px solid #ccc; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 4px;" title="Empty/Clear">
+                <span style="font-size: 24px; color: #999;">∅</span>
+            </div>
+            
+            <!-- Dynamic symbols will be added here -->
+            {% for element in elements %}
+            <div class="modal-symbol-option" data-symbol-id="{{ element.id }}" data-symbol-desc="{{ element.description }}" style="width: 60px; height: 60px; border: 2px solid #ccc; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 4px;" title="{{ element.description }}">
+                {% if element.symbol %}
+                <img src="{{ url_for('element_symbol', id=element.id) }}" alt="{{ element.description }}" style="width: 48px; height: 48px; object-fit: contain;">
+                {% else %}
+                <span style="font-size: 14px; font-weight: bold;">{{ element.abbrieviation or element.description[:2] }}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div style="text-align: right;">
+            <button id="cancelModal" style="background: #f8f9fa; border: 1px solid #ccc; padding: 8px 16px; margin-right: 8px; border-radius: 4px; cursor: pointer;">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Chart creation script loaded');
+    
+    // First, verify DOM is ready
+    if (document.readyState === 'loading') {
+        console.log('DOM still loading...');
+    } else {
+        console.log('DOM already loaded');
+    }
+    
+    const gridTable = document.getElementById('chart-grid');
+    const numRowsInput = document.getElementById('num_rows');
+    const numColsInput = document.getElementById('num_columns');
+    const resizeHandle = document.getElementById('resize-handle');
+    const nameInput = document.getElementById('name');
+    const pieceSelect = document.getElementById('piece_id');
+    const ageSelect = document.getElementById('age_id');
+    const sizeSelect = document.getElementById('size_id');
+    const repeatStartInput = document.getElementById('repeat_column_start');
+    const repeatEndInput = document.getElementById('repeat_column_end');
+    
+    // Comprehensive element check
+    console.log('=== ELEMENT CHECK ===');
+    console.log('gridTable:', gridTable ? 'FOUND' : 'NOT FOUND');
+    console.log('nameInput:', nameInput ? 'FOUND' : 'NOT FOUND');
+    console.log('pieceSelect:', pieceSelect ? 'FOUND' : 'NOT FOUND');
+    console.log('ageSelect:', ageSelect ? 'FOUND' : 'NOT FOUND');
+    console.log('sizeSelect:', sizeSelect ? 'FOUND' : 'NOT FOUND');
+    console.log('=== END ELEMENT CHECK ===');
+    
+    // Cell symbols data for edit mode
+    const cellSymbols = {% if edit_mode and cell_symbols %}{{ cell_symbols|tojson }}{% else %}{}{% endif %};
+    console.log('Cell symbols loaded:', cellSymbols);
+    
+    // Elements lookup for symbol display
+    const elementsData = {
+        {% for element in elements %}
+        '{{ element.id }}': {
+            id: {{ element.id }},
+            description: '{{ element.description }}',
+            abbreviation: '{{ element.abbrieviation or (element.description[:2] if element.description else '') }}',
+            hasSymbol: {% if element.symbol %}true{% else %}false{% endif %}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    };
+    console.log('Elements data loaded:', elementsData);
+    
+    // Modal and resize state
+    let isResizing = false;
+    let startX, startY, startRows, startCols;
+    
+    // Function to update cell display based on symbol
+    function updateCellDisplay(cell, symbolId) {
+        // Clear existing content
+        const existingDisplay = cell.querySelector('.symbol-display');
+        if (existingDisplay) {
+            existingDisplay.remove();
+        }
+        
+        if (symbolId && symbolId !== '') {
+            const symbolData = elementsData[symbolId];
+            if (symbolData) {
+                const displayDiv = document.createElement('div');
+                displayDiv.className = 'symbol-display';
+                displayDiv.style.position = 'absolute';
+                displayDiv.style.top = '0';
+                displayDiv.style.left = '0';
+                displayDiv.style.width = '100%';
+                displayDiv.style.height = '100%';
+                displayDiv.style.display = 'flex';
+                displayDiv.style.alignItems = 'center';
+                displayDiv.style.justifyContent = 'center';
+                displayDiv.style.pointerEvents = 'none';
+                
+                if (symbolData.hasSymbol) {
+                    const img = document.createElement('img');
+                    img.src = `/elements/${symbolId}/symbol`;
+                    img.alt = symbolData.description;
+                    img.style.width = '32px';
+                    img.style.height = '32px';
+                    img.style.objectFit = 'contain';
+                    displayDiv.appendChild(img);
+                } else {
+                    const span = document.createElement('span');
+                    span.textContent = symbolData.abbreviation;
+                    span.style.fontSize = '12px';
+                    span.style.fontWeight = 'bold';
+                    span.style.color = '#333';
+                    displayDiv.appendChild(span);
+                }
+                
+                cell.appendChild(displayDiv);
+            }
+        }
+    }
+    
+    // Modal functionality
+    const modal = document.getElementById('symbolModal');
+    const closeModal = document.getElementById('closeModal');
+    const cancelModal = document.getElementById('cancelModal');
+    
+    // Modal state
+    let currentCell = null;
+    let currentCellInput = null;
+    
+    function openSymbolModal(cell, hiddenInput) {
+        currentCell = cell;
+        currentCellInput = hiddenInput;
+        modal.style.display = 'block';
+        
+        // Highlight current symbol if any
+        const currentSymbolId = hiddenInput.value;
+        document.querySelectorAll('.modal-symbol-option').forEach(opt => {
+            if (opt.dataset.symbolId === currentSymbolId) {
+                opt.style.border = '3px solid #0066cc';
+            } else {
+                opt.style.border = '2px solid #ccc';
+            }
+        });
+    }
+    
+    function closeSymbolModal() {
+        modal.style.display = 'none';
+        currentCell = null;
+        currentCellInput = null;
+    }
+    
+    // Modal event listeners
+    closeModal.addEventListener('click', closeSymbolModal);
+    cancelModal.addEventListener('click', closeSymbolModal);
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            closeSymbolModal();
+        }
+    });
+    
+    // Symbol selection in modal
+    document.addEventListener('click', function(event) {
+        if (event.target.closest('.modal-symbol-option')) {
+            const symbolOption = event.target.closest('.modal-symbol-option');
+            const symbolId = symbolOption.dataset.symbolId;
+            
+            if (currentCellInput && currentCell) {
+                currentCellInput.value = symbolId;
+                console.log('Setting cell symbol to:', symbolId);
+                updateCellDisplay(currentCell, symbolId);
+                closeSymbolModal();
+            }
+        }
+    });
+    
+    function renderGrid(rows, cols) {
+        console.log('Rendering grid:', rows, 'x', cols);
+        gridTable.innerHTML = '';
+        
+        const repeatStart = parseInt(repeatStartInput.value) || 0;
+        const repeatEnd = parseInt(repeatEndInput.value) || 0;
+        
+        console.log('Repeat values in renderGrid - start:', repeatStart, 'end:', repeatEnd);
+        
+        for (let r = 0; r < rows; r++) {
+            const tr = document.createElement('tr');
+            for (let c = 0; c < cols; c++) {
+                const td = document.createElement('td');
+                td.style.width = '40px';
+                td.style.height = '40px';
+                td.style.border = '1px solid #888';
+                td.style.background = '#fff';
+                
+                // Apply repeat styling
+                const colNum = c + 1;
+                console.log(`Processing column ${colNum}, repeatStart=${repeatStart}, repeatEnd=${repeatEnd}`);
+                
+                if (repeatStart > 0 && repeatEnd > 0 && repeatStart <= repeatEnd && colNum >= repeatStart && colNum <= repeatEnd) {
+                    console.log(`✓ Applying repeat styling to column ${colNum} (background + basic styling)`);
+                    td.style.backgroundColor = '#e6f3ff';
+                    td.style.border = '2px solid #0066cc';
+                } else {
+                    console.log(`✗ No repeat styling for column ${colNum}`);
+                    td.style.backgroundColor = '#fff';
+                    td.style.border = '1px solid #888';
+                }
+                
+                if (repeatStart > 0 && repeatEnd > 0 && repeatStart <= repeatEnd && colNum === repeatStart) {
+                    console.log(`✓ Adding START border to column ${colNum}`);
+                    td.style.borderLeft = '4px solid #0066cc';
+                }
+                if (repeatStart > 0 && repeatEnd > 0 && repeatStart <= repeatEnd && colNum === repeatEnd) {
+                    console.log(`✓ Adding END border to column ${colNum}`);
+                    td.style.borderRight = '4px solid #0066cc';
+                }
+                
+                // Add hidden input for form submission
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = `cell_symbol_${r}_${c}`;
+                hiddenInput.setAttribute('aria-label', `Symbol for row ${r + 1}, column ${c + 1}`);
+                
+                // Load existing symbol if in edit mode
+                const cellKey = `${r},${c}`;
+                if (cellSymbols[cellKey]) {
+                    hiddenInput.value = cellSymbols[cellKey];
+                    console.log(`Loading existing symbol for cell ${r},${c}:`, cellSymbols[cellKey]);
+                } else {
+                    hiddenInput.value = '';
+                }
+                
+                // Make cell clickable for symbol selection
+                td.style.cursor = 'pointer';
+                td.style.position = 'relative';
+                td.style.textAlign = 'center';
+                td.style.verticalAlign = 'middle';
+                
+                // Add cell click handler
+                td.addEventListener('click', function() {
+                    console.log(`Opening symbol modal for cell ${r},${c}`);
+                    openSymbolModal(td, hiddenInput);
+                });
+                
+                // Display current symbol if any
+                updateCellDisplay(td, hiddenInput.value);
+                
+                td.appendChild(hiddenInput);
+                
+                tr.appendChild(td);
+            }
+            gridTable.appendChild(tr);
+        }
+        console.log('Grid rendered successfully');
+    }
+    
+    // Auto-name generation (Working Version)
+    function generateChartName() {
+        console.log('=== GENERATE CHART NAME ===');
+        
+        const pieceName = pieceSelect.options[pieceSelect.selectedIndex]?.text || '';
+        const ageName = ageSelect.options[ageSelect.selectedIndex]?.text || '';
+        const sizeName = sizeSelect.options[sizeSelect.selectedIndex]?.text || '';
+        
+        console.log('Selected:', {
+            piece: { value: pieceSelect.value, text: pieceName },
+            age: { value: ageSelect.value, text: ageName },
+            size: { value: sizeSelect.value, text: sizeName }
+        });
+        
+        if (pieceSelect.value && ageSelect.value && 
+            pieceName !== 'Select Piece' && ageName !== 'Select Age') {
+            
+            let chartName;
+            if (ageName.toLowerCase().includes('adult') && sizeSelect.value && sizeName !== 'Select Size') {
+                chartName = `${pieceName} - ${ageName} - ${sizeName}`;
+            } else {
+                chartName = `${pieceName} - ${ageName} - NA`;
+            }
+            
+            console.log('Generated chart name:', chartName);
+            nameInput.value = chartName;
+        } else {
+            console.log('Incomplete selection - not generating name');
+        }
+    }
+    
+    // Size dropdown logic
+    function handleAgeChange() {
+        console.log('Age changed - handling size dropdown');
+        const ageText = ageSelect.selectedOptions[0]?.text || '';
+        
+        if (ageText.toLowerCase().includes('adult')) {
+            sizeSelect.disabled = false;
+            sizeSelect.style.opacity = '1';
+            console.log('Adult selected - size dropdown enabled');
+        } else {
+            sizeSelect.disabled = true;
+            sizeSelect.style.opacity = '0.5';
+            sizeSelect.value = '';
+            console.log('Non-adult selected - size dropdown disabled');
+        }
+        
+        generateChartName();
+    }
+    
+    // Form submission validation
+    function validateForm() {
+        console.log('=== VALIDATE FORM CALLED ===');
+        const startVal = parseInt(repeatStartInput.value) || 0;
+        const endVal = parseInt(repeatEndInput.value) || 0;
+        const numCols = parseInt(numColsInput.value) || 1;
+        console.log('Form validation values:');
+        console.log('- startVal:', startVal, '(type:', typeof startVal, ')');
+        console.log('- endVal:', endVal, '(type:', typeof endVal, ')');
+        console.log('- numCols:', numCols, '(type:', typeof numCols, ')');
+        
+        // Check repeat validation only if both values are provided
+        if (startVal > 0 && endVal > 0) {
+            console.log('Both repeat values provided, validating...');
+            
+            if (endVal <= startVal) {
+                console.log('❌ VALIDATION FAILED: endVal <= startVal');
+                console.log(`   ${endVal} <= ${startVal}`);
+                alert('Please fix the repeat column values. Repeat end must be greater than repeat start.');
+                return false;  // Prevent form submission
+            }
+            
+            // Check if repeat values exceed grid dimensions
+            if (startVal > numCols || endVal > numCols) {
+                console.log('❌ VALIDATION FAILED: repeat values exceed grid columns');
+                console.log(`   startVal > numCols: ${startVal} > ${numCols} = ${startVal > numCols}`);
+                console.log(`   endVal > numCols: ${endVal} > ${numCols} = ${endVal > numCols}`);
+                alert(`Please fix the repeat column values. Repeat values cannot exceed the number of columns (${numCols}).`);
+                return false;  // Prevent form submission
+            }
+            
+            console.log('✅ Repeat validation passed');
+        } else {
+            console.log('Repeat values not provided or zero, skipping repeat validation');
+        }
+        
+        console.log('✅ FORM VALIDATION PASSED');
+        return true;  // Allow form submission
+    }
+
+    // Repeat validation
+    function validateRepeatColumns() {
+        const startVal = parseInt(repeatStartInput.value) || 0;
+        const endVal = parseInt(repeatEndInput.value) || 0;
+        const numCols = parseInt(numColsInput.value) || 1;
+        
+        console.log('validateRepeatColumns called with start:', startVal, 'end:', endVal, 'numCols:', numCols);
+        
+        repeatStartInput.style.borderColor = '';
+        repeatEndInput.style.borderColor = '';
+        
+        // Only validate if both have values AND start is valid
+        if (startVal > 0 && endVal > 0) {
+            if (endVal <= startVal) {
+                console.log('Validation failed: end <= start');
+                repeatStartInput.style.borderColor = '#ff4444';
+                repeatEndInput.style.borderColor = '#ff4444';
+                return false;
+            }
+            
+            // Check if repeat values exceed grid dimensions
+            if (startVal > numCols || endVal > numCols) {
+                console.log('Validation failed: repeat values exceed grid columns');
+                repeatStartInput.style.borderColor = '#ff4444';
+                repeatEndInput.style.borderColor = '#ff4444';
+                return false;
+            }
+        }
+        console.log('Validation passed - returning true');
+        return true;
+    }
+    
+    // Drag resize functionality
+    console.log('Setting up drag functionality, resize handle:', resizeHandle);
+    resizeHandle.addEventListener('mousedown', function(e) {
+        console.log('Mousedown on resize handle - drag starting');
+        isResizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startRows = parseInt(numRowsInput.value) || 1;
+        startCols = parseInt(numColsInput.value) || 1;
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+        console.log('Dragging - mouse move detected');
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        const cellSize = 40;
+
+        const newCols = Math.max(1, startCols + Math.round(deltaX / cellSize));
+        const newRows = Math.max(1, startRows + Math.round(deltaY / cellSize));
+
+        numColsInput.value = newCols;
+        numRowsInput.value = newRows;
+        renderGrid(newRows, newCols);
+    });
+
+    document.addEventListener('mouseup', function() {
+        if (isResizing) {
+            console.log('Mouse up - drag ended');
+            isResizing = false;
+        }
+    });
+    
+    // Event listeners
+    console.log('Setting up event listeners...');
+    
+    // Check if chart name elements exist before adding listeners
+    if (!nameInput || !pieceSelect || !ageSelect || !sizeSelect) {
+        console.error('CRITICAL: Chart name form elements not found!', {
+            nameInput: !!nameInput,
+            pieceSelect: !!pieceSelect,
+            ageSelect: !!ageSelect, 
+            sizeSelect: !!sizeSelect
+        });
+        return;
+    }
+    
+    // Add chart name generation event listeners
+    pieceSelect.addEventListener('change', function() {
+        console.log('Piece changed to:', this.value, '-', this.options[this.selectedIndex]?.text);
+        generateChartName();
+    });
+    
+    ageSelect.addEventListener('change', function() {
+        console.log('Age changed to:', this.value, '-', this.options[this.selectedIndex]?.text);
+        handleAgeChange();
+    });
+    
+    sizeSelect.addEventListener('change', function() {
+        console.log('Size changed to:', this.value, '-', this.options[this.selectedIndex]?.text);
+        generateChartName();
+    });
+    
+    [numRowsInput, numColsInput].forEach(input => {
+        if (input) {
+            input.addEventListener('input', function() {
+                const rows = parseInt(numRowsInput.value) || 1;
+                const cols = parseInt(numColsInput.value) || 1;
+                renderGrid(rows, cols);
+            });
+        }
+    });
+    
+    [repeatStartInput, repeatEndInput].forEach(input => {
+        if (input) {
+            console.log('Setting up event listeners for:', input.id, input);
+            // Handle both input and change events to catch spinner arrow clicks
+            ['input', 'change'].forEach(eventType => {
+                input.addEventListener(eventType, function() {
+                    console.log(`Repeat ${input.id} ${eventType} event:`, input.value);
+                    // Always re-render grid to show visual feedback, regardless of validation
+                    const rows = parseInt(numRowsInput.value) || 1;
+                    const cols = parseInt(numColsInput.value) || 1;
+                    console.log('Re-rendering grid after repeat change');
+                    renderGrid(rows, cols);
+                    
+                    // Run validation separately for border styling
+                    validateRepeatColumns();
+                });
+            });
+        }
+    });
+    
+    // Add form validation event listener
+    const chartForm = document.getElementById('chartForm');
+    if (chartForm) {
+        console.log('Form element found, adding submit listener');
+        chartForm.addEventListener('submit', function(event) {
+            console.log('=== FORM SUBMIT EVENT FIRED ===');
+            console.log('Current form values:');
+            console.log('- Repeat Start:', repeatStartInput.value);
+            console.log('- Repeat End:', repeatEndInput.value);
+            console.log('- Num Columns:', numColsInput.value);
+            
+            const validationResult = validateForm();
+            console.log('Validation result:', validationResult);
+            
+            if (!validationResult) {
+                console.log('❌ VALIDATION FAILED - PREVENTING SUBMISSION');
+                event.preventDefault();  // Prevent form submission
+                event.stopPropagation();
+                return false;
+            }
+            console.log('✅ VALIDATION PASSED - ALLOWING SUBMISSION');
+        });
+    } else {
+        console.error('Chart form element not found!');
+    }
+
+    // Initialize
+    console.log('Initializing grid...');
+    handleAgeChange();
+    {% if edit_mode %}
+    renderGrid({{ chart.num_rows }}, {{ chart.num_columns }});
+        // Scroll grid container to bottom right on edit mode
+        setTimeout(function() {
+            const gridContainer = document.getElementById('chart-grid-container');
+            if (gridContainer) {
+                gridContainer.scrollLeft = gridContainer.scrollWidth;
+                gridContainer.scrollTop = gridContainer.scrollHeight;
+                console.log('Scrolled grid container to bottom right');
+            }
+        }, 100);
+    {% else %}
+    renderGrid(10, 10);
+    {% endif %}
+    console.log('Initialization complete');
+});
+</script>
+{% endblock %}

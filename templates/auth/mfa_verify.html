@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Identity – PCP Pattern Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body { background: #f0f2f5; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .card { background: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); padding: 40px 48px; width: 100%; max-width: 420px; }
+        .card h2 { margin: 0 0 6px; font-size: 22px; color: #333; }
+        .card p.subtitle { color: #888; margin: 0 0 24px; font-size: 14px; }
+        .method-badge { display: inline-block; background: #eaf4fe; color: #2471a3; border: 1px solid #aed6f1; border-radius: 20px; padding: 3px 12px; font-size: 12px; font-weight: 600; margin-bottom: 22px; }
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600; color: #444; }
+        .form-group input { width: 100%; padding: 9px 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 22px; letter-spacing: 6px; text-align: center; box-sizing: border-box; }
+        .form-group input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 3px rgba(52,152,219,0.15); }
+        .btn-verify { width: 100%; padding: 10px; background: #27ae60; color: #fff; border: none; border-radius: 5px; font-size: 15px; font-weight: 600; cursor: pointer; }
+        .btn-verify:hover { background: #229954; }
+        .btn-back { display: block; text-align: center; margin-top: 14px; color: #888; font-size: 13px; text-decoration: none; }
+        .btn-back:hover { color: #333; }
+        .alert { padding: 10px 14px; border-radius: 5px; margin-bottom: 18px; font-size: 13px; }
+        .alert-error { background: #fdecea; color: #c0392b; border: 1px solid #f5c6cb; }
+        .alert-info  { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .hint { font-size: 12px; color: #888; margin-top: 6px; }
+        #loading-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.55); z-index:9999; align-items:center; justify-content:center; }
+        #loading-overlay.active { display:flex; }
+        .spinner { width:52px; height:52px; border:6px solid #dde; border-top-color:#27ae60; border-radius:50%; animation:spin 0.75s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="loading-overlay"><div class="spinner"></div></div>
+    <div class="card">
+        <h2>Two-Factor Verification</h2>
+        <p class="subtitle">Enter the code to complete sign-in</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        <span class="method-badge">
+            {% if method == 'totp' %}Authenticator App (TOTP){% else %}Email OTP{% endif %}
+        </span>
+
+        <form method="POST" action="{{ url_for('mfa_verify') }}" autocomplete="off">
+            <div class="form-group">
+                <label for="code">6-Digit Code</label>
+                <input type="text" id="code" name="code" maxlength="6" pattern="[0-9]{6}"
+                       required autofocus inputmode="numeric" placeholder="000000">
+                {% if method == 'totp' %}
+                    <p class="hint">Open your authenticator app and enter the current code.</p>
+                {% else %}
+                    <p class="hint">Check your email inbox for the code (valid for 10 minutes).</p>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn-verify">Verify</button>
+        </form>
+        <a href="{{ url_for('login') }}" class="btn-back">← Back to login</a>
+    </div>
+    <script>
+        document.querySelector('form').addEventListener('submit', function () {
+            document.getElementById('loading-overlay').classList.add('active');
+            document.body.style.cursor = 'wait';
+        });
+    </script>
+</body>
+</html>

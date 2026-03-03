@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Elements{% endblock %}
+
+{% block content %}
+
+
+<div class="page-header">
+    <h2>Elements</h2>
+    <a href="{{ url_for('elements_create') }}" class="btn btn-primary">Add Element</a>
+    <a href="{{ url_for('elements_export_excel', type_filter=type_filter) }}" class="btn btn-success" style="margin-left: 8px;">Export to Excel</a>
+</div>
+
+<form method="get" style="margin-bottom: 16px;">
+    <label for="type_filter" style="margin-right: 8px;">Type:</label>
+    <select name="type_filter" id="type_filter" onchange="this.form.submit()" style="padding: 4px 8px; min-width: 120px;">
+        <option value="">All</option>
+        {% for t in type_options %}
+            <option value="{{ t.type }}" {% if t.type == type_filter %}selected{% endif %}>{{ t.type }}</option>
+        {% endfor %}
+    </select>
+</form>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th title="Primary key for the element">ID</th>
+            <th title="Visual symbol for the element (stitch only)">Symbol</th>
+            <th title="Ascii equivalent of symbol">ASCII</th>
+            <th title="Explanation of the element">Description</th>
+            <th title="Short form of the element">Abbreviation</th>
+            <th title="Type of element i.e. stitch, measurement or instruction">Type</th>
+            <th title="User who created the element entry">Updated By</th>
+            <th title="The time when the element was added to the database">Updated At</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for element in elements %}
+        <tr>
+            <td>{{ element.id }}</td>
+            <td>
+                {% if element.symbol %}
+                    <img src="data:image/png;base64,{{ element.symbol | b64encode }}" 
+                         alt="{{ element.ascii_symbol }}" 
+                         style="width: 24px; height: 24px; background-color: white; padding: 2px;">
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+            <td><code>{{ element.ascii_symbol }}</code></td>
+            <td>{{ element.description or '-' }}</td>
+            <td>{{ element.abbrieviation or '-' }}</td>
+            <td>{{ element.type }}</td>
+            <td>{{ element.created_by }}</td>
+            <td>{{ element.created_at | fmt_dt }}</td>
+            <td class="actions">
+                <a href="{{ url_for('elements_edit', id=element.id) }}" class="btn btn-sm">Edit</a>
+                <form method="POST" action="{{ url_for('elements_delete', id=element.id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

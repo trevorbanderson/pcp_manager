@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Pattern Chart{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 15px;">
+    <h2 style="margin: 0; display: inline-block;">Edit Pattern Chart</h2>
+    <a href="{{ url_for('pattern_charts_list') }}" class="btn btn-secondary" style="float: right;">Back to List</a>
+</div>
+
+<form method="POST">
+    <div style="margin-bottom: 8px;">
+        <label for="pattern_id" style="display: block; margin-bottom: 3px;">Pattern:</label>
+        <select id="pattern_id" name="pattern_id" required style="padding: 4px 8px; width: 300px;">
+            {% for pattern in patterns %}
+            <option value="{{ pattern['id'] }}" {% if pattern['id'] == pattern_chart['pattern_id'] %}selected{% endif %}>
+                {{ pattern['name'] }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="margin-bottom: 8px;">
+        <label for="chart_id" style="display: block; margin-bottom: 3px;">Chart:</label>
+        <select id="chart_id" name="chart_id" required style="padding: 4px 8px; width: 300px;">
+            {% for chart in charts %}
+            <option value="{{ chart['id'] }}" {% if chart['id'] == pattern_chart['chart_id'] %}selected{% endif %}>
+                {{ chart['name'] }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="margin-bottom: 8px;">
+        <label for="chart_order" style="display: block; margin-bottom: 3px;">Chart Order:</label>
+        <input type="number" id="chart_order" name="chart_order" min="1" value="{{ pattern_chart['chart_order'] }}" style="padding: 4px 8px; width: 120px;">
+    </div>
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ get_full_name(pattern_chart.created_by) }} at {{ pattern_chart.created_at | fmt_dt }}</p>
+    <div style="margin-top: 12px;">
+        <button type="submit" class="btn btn-primary btn-sm">Update</button>
+        <a href="{{ url_for('pattern_charts_list') }}" class="btn btn-secondary btn-sm">Cancel</a>
+    </div>
+</form>
+{% endblock %}

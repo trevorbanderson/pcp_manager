@@ -1,0 +1,755 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header" style="margin-bottom: 15px;">
+    <h2 style="margin: 0;">{% if edit_mode %}Edit Chart{% else %}Create Chart{% endif %}</h2>
+</div>
+
+<form method="POST" style="max-width: 600px;" id="chartForm">
+    <input type="hidden" name="pattern_id" value="{{ pattern_id }}">
+    
+    <div style="margin-bottom: 8px;">
+        <label for="name" style="display: block; margin-bottom: 3px;">Chart Name:</label>
+        <input type="text" id="name" name="name" style="width: 300px; padding: 4px 8px;" required value="{% if edit_mode %}{{ chart.name }}{% endif %}" autocomplete="off">
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+        <div>
+            <label for="piece_id" style="display: block; margin-bottom: 3px;">Piece:</label>
+            <select id="piece_id" name="piece_id" style="width: 100%; padding: 4px 8px;" required autocomplete="off">
+                <option value="">Select Piece</option>
+                {% for piece in pieces %}
+                <option value="{{ piece.id }}"{% if edit_mode and chart.piece_id == piece.id %} selected{% endif %}>{{ piece.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div>
+            <label for="age_id" style="display: block; margin-bottom: 3px;">Age Group:</label>
+            <select id="age_id" name="age_id" style="width: 100%; padding: 4px 8px;" required autocomplete="off">
+                <option value="">Select Age</option>
+                {% for age in ages %}
+                <option value="{{ age.id }}"{% if edit_mode and chart.age_id == age.id %} selected{% endif %}>{{ age.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div>
+            <label for="size_id" style="display: block; margin-bottom: 3px;">Size:</label>
+            <select id="size_id" name="size_id" style="width: 100%; padding: 4px 8px;" required autocomplete="off">
+                <option value="">Select Size</option>
+                {% for size in sizes %}
+                <option value="{{ size.id }}"{% if edit_mode and chart.size_id == size.id %} selected{% endif %}>{{ size.abbreviation or size.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+        <div>
+            <label for="num_rows" style="display: block; margin-bottom: 3px;">Rows:</label>
+            <input type="number" id="num_rows" name="num_rows" min="1" style="width: 80px; padding: 4px 8px;" required value="{% if edit_mode %}{{ chart.num_rows }}{% else %}10{% endif %}" autocomplete="off">
+        </div>
+        
+        <div>
+            <label for="num_columns" style="display: block; margin-bottom: 3px;">Columns:</label>
+            <input type="number" id="num_columns" name="num_columns" min="1" style="width: 80px; padding: 4px 8px;" required value="{% if edit_mode %}{{ chart.num_columns }}{% else %}10{% endif %}" autocomplete="off">
+        </div>
+        
+        <div>
+            <label for="repeat_column_start" style="display: block; margin-bottom: 3px;">Repeat Start:</label>
+            <input type="number" id="repeat_column_start" name="repeat_column_start" min="1" style="width: 80px; padding: 4px 8px;" value="{% if edit_mode and chart.repeat_column_start %}{{ chart.repeat_column_start }}{% endif %}" autocomplete="off">
+        </div>
+        
+        <div>
+            <label for="repeat_column_end" style="display: block; margin-bottom: 3px;">Repeat End:</label>
+            <input type="number" id="repeat_column_end" name="repeat_column_end" min="1" style="width: 80px; padding: 4px 8px;" value="{% if edit_mode and chart.repeat_column_end %}{{ chart.repeat_column_end }}{% endif %}" autocomplete="off">
+        </div>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+        <label for="instructions" style="display: block; margin-bottom: 3px;">Instructions:</label>
+        <textarea id="instructions" name="instructions" style="width: 100%; height: 80px; padding: 4px 8px;">{% if edit_mode %}{{ chart.instructions or '' }}{% endif %}</textarea>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+        <label style="display: block; margin-bottom: 3px;">Chart Grid:</label>
+        <div id="grid-size-display" style="font-weight: bold; color: #007bff; margin-bottom: 5px; font-size: 14px;">Grid: {% if edit_mode %}{{ chart.num_rows }}x{{ chart.num_columns }}{% else %}10x10{% endif %} (Square)</div>
+        <div id="chart-grid-container" style="display: inline-block; position: relative;">
+            <table id="chart-grid" style="border-collapse: collapse;">
+                <!-- Grid will be rendered here -->
+            </table>
+            <div id="resize-handle" style="position: absolute; right: -10px; bottom: -10px; width: 20px; height: 20px; background: #ff6b6b; border: 2px solid #333; border-radius: 4px; cursor: se-resize; display: flex; align-items: center; justify-content: center; z-index: 10; font-weight: bold;">
+                <span style="font-size: 14px; color: #fff; user-select: none; line-height: 1;">⇘</span>
+            </div>
+        </div>
+        <div style="font-size: 12px; color: #888; margin-top: 2px;">Click grid cells to select symbols. Drag the corner to resize grid (maintains square proportions).</div>
+    </div>
+    
+    <div style="margin-bottom: 15px;">
+        <button type="submit" style="padding: 8px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px;">Create Chart</button>
+        <a href="{% if pattern_id %}/charts?pattern_id={{ pattern_id }}{% else %}/charts{% endif %}" style="margin-left: 10px; padding: 8px 20px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 4px;">Cancel</a>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== CHART CREATION LOADED - REIMPLEMENT GRID ===');
+    
+    // Get form elements
+    const nameInput = document.getElementById('name');
+    const pieceSelect = document.getElementById('piece_id');
+    const ageSelect = document.getElementById('age_id');
+    const sizeSelect = document.getElementById('size_id');
+    const gridTable = document.getElementById('chart-grid');
+    const numRowsInput = document.getElementById('num_rows');
+    const numColsInput = document.getElementById('num_columns');
+    const repeatStartInput = document.getElementById('repeat_column_start');
+    const repeatEndInput = document.getElementById('repeat_column_end');
+    const resizeHandle = document.getElementById('resize-handle');
+    const gridDisplay = document.getElementById('grid-size-display');
+    
+    console.log('✅ All elements found:', {
+        nameInput: !!nameInput,
+        pieceSelect: !!pieceSelect,
+        ageSelect: !!ageSelect,
+        sizeSelect: !!sizeSelect,
+        gridTable: !!gridTable,
+        numRowsInput: !!numRowsInput,
+        numColsInput: !!numColsInput,
+        resizeHandle: !!resizeHandle,
+        gridDisplay: !!gridDisplay
+    });
+
+    // GRID STATE MANAGEMENT
+    let currentGridSize = 10;
+    let isResizing = false;
+    let resizeStartX, resizeStartY, resizeStartSize;
+    
+    // FORCE SQUARE GRID - always keep rows and columns the same
+    function enforceSquareGrid(newSize) {
+        newSize = Math.max(1, Math.min(newSize, 20)); // Cap at 20x20
+        currentGridSize = newSize;
+        numRowsInput.value = newSize;
+        numColsInput.value = newSize;
+        
+        // Update display
+        if (gridDisplay) {
+            gridDisplay.textContent = `Grid: ${newSize}x${newSize} (Square)`;
+            gridDisplay.style.color = '#28a745';
+        }
+        
+        console.log(`🔄 Grid size enforced to: ${newSize}x${newSize}`);
+        renderSquareGrid(newSize);
+    }
+    
+    // RENDER PERFECT SQUARE GRID
+    function renderSquareGrid(size) {
+        console.log(`🎯 Rendering ${size}x${size} SQUARE grid`);
+        gridTable.innerHTML = '';
+        
+        const repeatStart = parseInt(repeatStartInput?.value) || 0;
+        const repeatEnd = parseInt(repeatEndInput?.value) || 0;
+        
+        // Header row
+        const headerRow = document.createElement('tr');
+        
+        // Empty corner cell
+        const cornerCell = document.createElement('th');
+        cornerCell.style.cssText = 'width: 35px; height: 35px; border: 1px solid #ccc; background: #f8f9fa;';
+        headerRow.appendChild(cornerCell);
+        
+        // Column headers
+        for (let col = 1; col <= size; col++) {
+            const th = document.createElement('th');
+            th.textContent = col;
+            th.style.cssText = 'width: 35px; height: 35px; border: 1px solid #ccc; text-align: center; font-size: 11px; background: #f8f9fa; font-weight: bold;';
+            
+            // Highlight repeat columns
+            if (repeatStart > 0 && repeatEnd > 0 && col >= repeatStart && col <= repeatEnd) {
+                th.style.backgroundColor = '#fff3cd';
+            }
+            
+            headerRow.appendChild(th);
+        }
+        gridTable.appendChild(headerRow);
+        
+        // Data rows
+        for (let row = 1; row <= size; row++) {
+            const tr = document.createElement('tr');
+            
+            // Row header
+            const rowHeader = document.createElement('th');
+            rowHeader.textContent = row;
+            rowHeader.style.cssText = 'width: 35px; height: 35px; border: 1px solid #ccc; text-align: center; font-size: 11px; background: #f8f9fa; font-weight: bold;';
+            tr.appendChild(rowHeader);
+            
+            // Data cells - PERFECT SQUARES
+            for (let col = 1; col <= size; col++) {
+                const td = document.createElement('td');
+                td.style.cssText = 'width: 35px; height: 35px; border: 1px solid #ccc; cursor: pointer; padding: 0; box-sizing: border-box;';
+                
+                // Highlight repeat columns
+                if (repeatStart > 0 && repeatEnd > 0 && col >= repeatStart && col <= repeatEnd) {
+                    td.style.backgroundColor = '#fff3cd';
+                } else {
+                    td.style.backgroundColor = '#fff';
+                }
+                
+                td.title = `Row ${row}, Col ${col}`;
+                tr.appendChild(td);
+            }
+            gridTable.appendChild(tr);
+        }
+    }
+    
+    // INPUT EVENT HANDLERS - enforce square
+    numRowsInput.addEventListener('input', function() {
+        const newSize = parseInt(this.value) || 1;
+        console.log(`🔄 Rows input changed to: ${newSize}`);
+        enforceSquareGrid(newSize);
+    });
+    
+    numColsInput.addEventListener('input', function() {
+        const newSize = parseInt(this.value) || 1;
+        console.log(`🔄 Columns input changed to: ${newSize}`);
+        enforceSquareGrid(newSize);
+    });
+    
+    // REPEAT COLUMN HANDLERS
+    [repeatStartInput, repeatEndInput].forEach(input => {
+        if (input) {
+            input.addEventListener('input', function() {
+                console.log(`🔄 Repeat ${this.id} changed to: ${this.value}`);
+                renderSquareGrid(currentGridSize); // Re-render to update highlights
+            });
+        }
+    });
+    
+    // RESIZE DRAG FUNCTIONALITY
+    if (resizeHandle) {
+        resizeHandle.addEventListener('mousedown', function(e) {
+            console.log('🖱️ Resize drag started');
+            isResizing = true;
+            resizeStartX = e.clientX;
+            resizeStartY = e.clientY;
+            resizeStartSize = currentGridSize;
+            
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = 'se-resize';
+            
+            e.preventDefault();
+        });
+    }
+    
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+        
+        const deltaX = e.clientX - resizeStartX;
+        const deltaY = e.clientY - resizeStartY;
+        
+        // Use the larger movement to determine grid size change
+        const maxDelta = Math.max(Math.abs(deltaX), Math.abs(deltaY));
+        const direction = (deltaX > 0 || deltaY > 0) ? 1 : -1;
+        
+        // 40 pixels = 1 grid size change
+        const sizeChange = Math.floor(maxDelta / 40) * direction;
+        const newSize = resizeStartSize + sizeChange;
+        
+        if (newSize !== currentGridSize && newSize >= 1 && newSize <= 20) {
+            console.log(`🖱️ Drag resize: ${currentGridSize} → ${newSize}`);
+            enforceSquareGrid(newSize);
+        }
+    });
+    
+    document.addEventListener('mouseup', function() {
+        if (isResizing) {
+            console.log('🖱️ Resize drag ended');
+            isResizing = false;
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+        }
+    });
+    
+    // Initialize square grid - use values from inputs (supports edit mode)
+    console.log('🚀 Initializing square grid from input values');
+    const initialRows = parseInt(numRowsInput.value) || 10;
+    const initialCols = parseInt(numColsInput.value) || 10;
+    const initialSize = Math.max(initialRows, initialCols); // Use larger value for square grid
+    console.log(`🚀 Edit mode grid size: ${initialSize}x${initialSize} (from inputs: ${initialRows}x${initialCols})`);
+    enforceSquareGrid(initialSize);
+    
+    console.log('🔍 Elements check:', {
+        nameInput: !!nameInput,
+        pieceSelect: !!pieceSelect,
+        ageSelect: !!ageSelect,
+        sizeSelect: !!sizeSelect,
+        gridTable: !!gridTable,
+        numRowsInput: !!numRowsInput,
+        numColsInput: !!numColsInput,
+        repeatStartInput: !!repeatStartInput,
+        repeatEndInput: !!repeatEndInput,
+        resizeHandle: !!resizeHandle
+    });
+    
+    console.log('🔍 Input values check:', {
+        rows: numRowsInput?.value,
+        cols: numColsInput?.value,
+        repeatStart: repeatStartInput?.value,
+        repeatEnd: repeatEndInput?.value
+    });
+    
+    // Debug resize handle specifically
+    if (resizeHandle) {
+        console.log('✅ Resize handle found!', resizeHandle);
+        console.log('🎨 Resize handle styles:', window.getComputedStyle(resizeHandle));
+    } else {
+        console.error('❌ Resize handle NOT found!');
+        // Try to find it differently
+        const allElements = document.querySelectorAll('#resize-handle');
+        console.log('All resize-handle elements:', allElements);
+    }
+    
+    if (!nameInput || !pieceSelect || !ageSelect || !sizeSelect) {
+        console.error('Required elements not found!');
+        return;
+    }
+    
+    // Render initial grid
+    console.log('🏁 Rendering initial SQUARE grid...');
+    renderGrid(10, 10);
+    
+    // Ensure inputs are synced at start
+    numRowsInput.value = '10';
+    numColsInput.value = '10';
+    console.log('🔄 Initial sync - Rows:', numRowsInput.value, 'Cols:', numColsInput.value);
+    
+    // DEBUG: Test grid render after a delay
+    setTimeout(function() {
+        console.log('🧪 Testing grid render after 2 seconds...');
+        console.log('🧪 Grid table element:', gridTable);
+        if (gridTable) {
+            console.log('🧪 Grid table innerHTML before render:', gridTable.innerHTML.substring(0, 100));
+            renderGrid(5, 5);
+            console.log('🧪 Grid table innerHTML after render:', gridTable.innerHTML.substring(0, 100));
+        }
+    }, 2000);
+    
+    // Chart name generation function
+    function generateChartName() {
+        console.log('=== GENERATE CHART NAME ===');
+        
+        const pieceName = pieceSelect.options[pieceSelect.selectedIndex]?.text || '';
+        const ageName = ageSelect.options[ageSelect.selectedIndex]?.text || '';
+        const sizeName = sizeSelect.options[sizeSelect.selectedIndex]?.text || '';
+        
+        console.log('Selected:', {
+            piece: { value: pieceSelect.value, text: pieceName },
+            age: { value: ageSelect.value, text: ageName },
+            size: { value: sizeSelect.value, text: sizeName }
+        });
+        
+        if (pieceSelect.value && ageSelect.value && 
+            pieceName !== 'Select Piece' && ageName !== 'Select Age') {
+            
+            let chartName;
+            if (ageName.toLowerCase().includes('adult') && sizeSelect.value && sizeName !== 'Select Size') {
+                chartName = `${pieceName} - ${ageName} - ${sizeName}`;
+            } else {
+                chartName = `${pieceName} - ${ageName} - NA`;
+            }
+            
+            console.log('Generated chart name:', chartName);
+            nameInput.value = chartName;
+        } else {
+            console.log('Incomplete selection - not generating name');
+        }
+    }
+    
+    // Grid rendering function
+    function renderGrid(rows, cols) {
+        if (!gridTable) return;
+        
+        console.log(`🎯 RENDERING GRID: ${rows}x${cols} (should be SQUARE)`);
+        gridTable.innerHTML = '';
+        
+        // Update the visual display
+        const gridDisplay = document.getElementById('grid-size-display');
+        if (gridDisplay) {
+            const isSquare = rows === cols;
+            gridDisplay.innerHTML = `Grid: ${rows}x${cols} ${isSquare ? '(✅ Square)' : '(❌ NOT Square!)'}`;
+            gridDisplay.style.color = isSquare ? '#28a745' : '#dc3545';
+        }
+        
+        const repeatStart = parseInt(repeatStartInput?.value) || 0;
+        const repeatEnd = parseInt(repeatEndInput?.value) || 0;
+        console.log('Repeat columns:', { repeatStart, repeatEnd });
+        
+        // Create header row with column numbers
+        const headerRow = document.createElement('tr');
+        const emptyHeaderCell = document.createElement('th');
+        emptyHeaderCell.style.cssText = 'width: 40px; height: 40px; border: 1px solid #ccc;';
+        headerRow.appendChild(emptyHeaderCell);
+        
+        for (let col = 1; col <= cols; col++) {
+            const th = document.createElement('th');
+            th.textContent = col;
+            let headerStyle = 'width: 40px; height: 40px; border: 1px solid #ccc; text-align: center; font-size: 12px;';
+            
+            // Highlight repeat columns in header
+            if (repeatStart > 0 && repeatEnd > 0 && col >= repeatStart && col <= repeatEnd) {
+                headerStyle += ' background-color: #fff3cd; font-weight: bold;';
+            }
+            
+            th.style.cssText = headerStyle;
+            headerRow.appendChild(th);
+        }
+        gridTable.appendChild(headerRow);
+        
+        // Create data rows
+        for (let row = 1; row <= rows; row++) {
+            const tr = document.createElement('tr');
+            
+            // Row header
+            const th = document.createElement('th');
+            th.textContent = row;
+            th.style.cssText = 'width: 40px; height: 40px; border: 1px solid #ccc; text-align: center; font-size: 12px;';
+            tr.appendChild(th);
+            
+            // Data cells
+            for (let col = 1; col <= cols; col++) {
+                const td = document.createElement('td');
+                let cellStyle = 'width: 40px; height: 40px; border: 1px solid #ccc; cursor: pointer; box-sizing: border-box;';
+                
+                // Highlight repeat columns
+                if (repeatStart > 0 && repeatEnd > 0 && col >= repeatStart && col <= repeatEnd) {
+                    cellStyle += ' background-color: #fff3cd;';
+                }
+                
+                td.style.cssText = cellStyle;
+                td.title = `Row ${row}, Column ${col}`;
+                tr.appendChild(td);
+            }
+            gridTable.appendChild(tr);
+        }
+    }
+    
+    // Repeat validation function
+    function validateRepeatColumns() {
+        if (!repeatStartInput || !repeatEndInput) return true;
+        
+        const startVal = parseInt(repeatStartInput.value) || 0;
+        const endVal = parseInt(repeatEndInput.value) || 0;
+        const numCols = parseInt(numColsInput?.value) || 1;
+        
+        console.log('Validating repeat columns:', { startVal, endVal, numCols });
+        
+        // Clear any existing warnings
+        repeatStartInput.style.borderColor = '';
+        repeatEndInput.style.borderColor = '';
+        
+        // Only validate if both values are provided and greater than 0
+        if (startVal > 0 && endVal > 0) {
+            if (endVal <= startVal) {
+                console.log('❌ Repeat validation failed: end <= start');
+                repeatStartInput.style.borderColor = 'red';
+                repeatEndInput.style.borderColor = 'red';
+                return false;
+            }
+            
+            if (startVal > numCols || endVal > numCols) {
+                console.log('❌ Repeat validation failed: values exceed columns');
+                if (startVal > numCols) repeatStartInput.style.borderColor = 'red';
+                if (endVal > numCols) repeatEndInput.style.borderColor = 'red';
+                return false;
+            }
+            
+            console.log('✅ Repeat validation passed');
+        }
+        
+        return true;
+    }
+    
+    // Event listeners for chart name generation
+    pieceSelect.addEventListener('change', function() {
+        console.log('Piece changed to:', this.value, '-', this.options[this.selectedIndex]?.text);
+        generateChartName();
+    });
+    
+    ageSelect.addEventListener('change', function() {
+        console.log('Age changed to:', this.value, '-', this.options[this.selectedIndex]?.text);
+        
+        // Handle size dropdown visibility
+        const ageText = this.options[this.selectedIndex]?.text || '';
+        if (ageText.toLowerCase().includes('adult')) {
+            sizeSelect.disabled = false;
+            sizeSelect.style.opacity = '1';
+        } else {
+            sizeSelect.disabled = true;
+            sizeSelect.style.opacity = '0.5';
+            sizeSelect.value = '';
+        }
+        
+        generateChartName();
+    });
+    
+    sizeSelect.addEventListener('change', function() {
+        console.log('Size changed to:', this.value, '-', this.options[this.selectedIndex]?.text);
+        generateChartName();
+    });
+    
+    // Grid size event listeners - maintain square proportions
+    [numRowsInput, numColsInput].forEach(input => {
+        if (input) {
+            input.addEventListener('input', function() {
+                const newValue = Math.max(1, parseInt(this.value) || 1);
+                
+                // FORCE both inputs to the same value to ensure square grid
+                numRowsInput.value = newValue;
+                numColsInput.value = newValue;
+                
+                console.log('🔄 Input changed - FORCING SQUARE GRID:', newValue + 'x' + newValue);
+                console.log('🔄 After sync - Rows:', numRowsInput.value, 'Cols:', numColsInput.value);
+                
+                renderGrid(newValue, newValue);
+                validateRepeatColumns();
+            });
+        }
+    });
+    
+    // Repeat column event listeners
+    [repeatStartInput, repeatEndInput].forEach(input => {
+        if (input) {
+            console.log('Adding event listeners to:', input.id);
+            ['input', 'change'].forEach(eventType => {
+                input.addEventListener(eventType, function() {
+                    console.log(`Repeat ${input.id} ${eventType}:`, input.value);
+                    const rows = parseInt(numRowsInput.value) || 1;
+                    const cols = parseInt(numColsInput.value) || 1;
+                    renderGrid(rows, cols);
+                    validateRepeatColumns();
+                });
+            });
+        }
+    });
+    
+    // Grid resize functionality
+    let isResizing = false;
+    let startX, startY, startCols, startRows;
+    
+    // Setup resize functionality after a small delay to ensure elements are ready
+    setTimeout(function() {
+        const resizeHandleDelayed = document.getElementById('resize-handle');
+        console.log('🔄 Delayed resize handle check:', !!resizeHandleDelayed);
+        
+        if (resizeHandleDelayed) {
+            console.log('✅ Setting up resize functionality...');
+            console.log('🎯 Resize handle element:', resizeHandleDelayed);
+            console.log('📏 Resize handle position:', resizeHandleDelayed.getBoundingClientRect());
+            
+            resizeHandleDelayed.addEventListener('mousedown', function(e) {
+                console.log('🔥 Resize handle mousedown detected');
+                console.log('🔥 Input elements at mousedown:', {
+                    numRowsInput: !!numRowsInput,
+                    numColsInput: !!numColsInput,
+                    rowsValue: numRowsInput?.value,
+                    colsValue: numColsInput?.value
+                });
+                
+                // Ensure both inputs have the same value before starting (square grid)
+                const currentRows = parseInt(numRowsInput.value) || 10;
+                const currentCols = parseInt(numColsInput.value) || 10;
+                const currentSize = Math.max(currentRows, currentCols); // Take the larger value to avoid shrinking
+                
+                // Force both to the same value
+                numRowsInput.value = currentSize;
+                numColsInput.value = currentSize;
+                
+                console.log('🔄 Pre-drag sync - forcing both to:', currentSize);
+                renderGrid(currentSize, currentSize); // Re-render to ensure visual consistency
+                
+                isResizing = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                startCols = currentSize;
+                startRows = currentSize;
+                
+                // Prevent text selection and other interference
+                document.body.style.userSelect = 'none';
+                document.body.style.cursor = 'se-resize';
+                
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔥 Starting resize from SQUARE:', currentSize + 'x' + currentSize, 'at position:', startX, startY);
+            });
+        } else {
+            console.error('❌ Delayed resize handle search also failed!');
+            console.log('🔍 All elements with id containing resize:', document.querySelectorAll('[id*="resize"]'));
+            console.log('🔍 Chart grid container:', document.getElementById('chart-grid-container'));
+        }
+    }, 100);
+
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        
+        // For corner resize, use the larger of the two movements to determine size
+        // This makes it more responsive to dragging right or down
+        const maxMovement = Math.max(Math.abs(deltaX), Math.abs(deltaY));
+        const direction = (deltaX >= 0 && deltaY >= 0) ? 1 : -1; // Positive for down-right, negative for up-left
+        
+        // Every 30 pixels of movement = 1 grid size change
+        const gridChange = Math.floor(maxMovement / 30) * direction;
+        
+        // Always maintain perfect square proportions
+        const startingSize = startCols; // Both should be equal since we enforce square
+        const newSize = Math.max(1, Math.min(startingSize + gridChange, 30)); // Cap at 30x30
+        
+        console.log('🔄 Dragging - deltaX:', deltaX, 'deltaY:', deltaY, 'maxMovement:', maxMovement, 'direction:', direction);
+        console.log('📐 GridChange:', gridChange, 'StartingSize:', startingSize, 'NewSize:', newSize);
+        
+        // Only update if size actually changed and force both to be exactly the same
+        if (parseInt(numColsInput.value) !== newSize || parseInt(numRowsInput.value) !== newSize) {
+            numColsInput.value = newSize.toString();
+            numRowsInput.value = newSize.toString();
+            
+            console.log('📝 SQUARE GRID UPDATE - Both dimensions forced to:', newSize);
+            
+            renderGrid(newSize, newSize);
+            validateRepeatColumns();
+        }
+    });
+
+    document.addEventListener('mouseup', function(e) {
+        if (isResizing) {
+            console.log('🛑 Mouse up - drag ended, final size:', numColsInput.value + 'x' + numRowsInput.value);
+            
+            // Reset cursor and allow text selection
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+            
+            isResizing = false;
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('🛑 Resize operation fully stopped');
+        }
+    });
+    
+    // Also handle mouse leave to ensure dragging stops if mouse leaves window
+    document.addEventListener('mouseleave', function() {
+        if (isResizing) {
+            console.log('🛑 Mouse left window - stopping resize');
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+            isResizing = false;
+        }
+    });
+    
+    // Form submission validation
+    const chartForm = document.getElementById('chartForm');
+    if (chartForm) {
+        chartForm.addEventListener('submit', function(e) {
+            console.log('Form submission - validating...');
+            
+            if (!validateRepeatColumns()) {
+                e.preventDefault();
+                alert('Please fix the repeat column values before submitting.');
+                console.log('❌ Form submission prevented due to repeat validation failure');
+                return false;
+            }
+            
+            // Additional validation: ensure repeat end > start if both provided
+            const startVal = parseInt(repeatStartInput?.value) || 0;
+            const endVal = parseInt(repeatEndInput?.value) || 0;
+            
+            if (startVal > 0 && endVal > 0 && endVal <= startVal) {
+                e.preventDefault();
+                alert('Repeat end must be greater than repeat start.');
+                console.log('❌ Form submission prevented: repeat end <= start');
+                return false;
+            }
+            
+    
+    // ===== CHART NAME GENERATION =====
+    function generateChartName() {
+        console.log('🏷️ Generating chart name...');
+        
+        const pieceName = pieceSelect.options[pieceSelect.selectedIndex]?.text || '';
+        const ageName = ageSelect.options[ageSelect.selectedIndex]?.text || '';
+        const sizeName = sizeSelect.options[sizeSelect.selectedIndex]?.text || '';
+        
+        if (pieceSelect.value && ageSelect.value && 
+            pieceName !== 'Select Piece' && ageName !== 'Select Age') {
+            
+            let chartName;
+            if (ageName.toLowerCase().includes('adult') && sizeSelect.value && sizeName !== 'Select Size') {
+                chartName = `${pieceName} - ${ageName} - ${sizeName}`;
+            } else {
+                chartName = `${pieceName} - ${ageName} - NA`;
+            }
+            
+            console.log('🏷️ Generated chart name:', chartName);
+            nameInput.value = chartName;
+        }
+    }
+    
+    // FORM DROPDOWN EVENT HANDLERS
+    pieceSelect.addEventListener('change', generateChartName);
+    ageSelect.addEventListener('change', generateChartName);
+    sizeSelect.addEventListener('change', generateChartName);
+    
+    // ===== VALIDATION FUNCTION =====
+    function validateRepeatColumns() {
+        const startVal = parseInt(repeatStartInput?.value) || 0;
+        const endVal = parseInt(repeatEndInput?.value) || 0;
+        
+        if (startVal > 0 && endVal > 0) {
+            if (startVal >= endVal) {
+                console.log('❌ Repeat validation failed: start >= end');
+                return false;
+            }
+            if (endVal > currentGridSize) {
+                console.log(`❌ Repeat validation failed: end (${endVal}) > grid size (${currentGridSize})`);
+                return false;
+            }
+        }
+        
+        console.log('✅ Repeat validation passed');
+        return true;
+    }
+    
+    // FORM SUBMISSION VALIDATION
+    const chartForm = document.getElementById('chartForm');
+    if (chartForm) {
+        chartForm.addEventListener('submit', function(e) {
+            console.log('📝 Form submission - validating...');
+            
+            if (!validateRepeatColumns()) {
+                e.preventDefault();
+                alert('Please fix the repeat column values before submitting.');
+                return false;
+            }
+            
+            console.log('✅ Form validation passed - submitting');
+        });
+    }
+
+    // ===== INITIALIZE GRID =====
+    // Initialize square grid - use values from inputs (supports edit mode)
+    console.log('🚀 Initializing square grid from input values');
+    const initialRows = parseInt(numRowsInput.value) || 10;
+    const initialCols = parseInt(numColsInput.value) || 10;
+    const initialSize = Math.max(initialRows, initialCols); // Use larger value for square grid
+    console.log(`🚀 Edit mode grid size: ${initialSize}x${initialSize} (from inputs: ${initialRows}x${initialCols})`);
+    enforceSquareGrid(initialSize);
+    
+    console.log('✅ GRID SYSTEM INITIALIZED - All functionality ready');
+});
+</script>
+{% endblock %}

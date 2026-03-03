@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Create Pattern{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 15px;">
+    <h2 style="margin: 0;">Create Pattern</h2>
+</div>
+
+<form method="POST" enctype="multipart/form-data" class="two-column-form">
+    <div class="two-column-container">
+        <div class="column">
+            <div class="form-group">
+                <label for="name">Pattern Name:</label>
+                <input type="text" id="name" name="name" maxlength="50" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <textarea id="description" name="description" maxlength="500" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="category_id">Category:</label>
+                <select id="category_id" name="category_id" required>
+                    <option value="">Select a category</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.category }} - {{ category.sub_category }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="difficulty_level">Difficulty Level:</label>
+                <select id="difficulty_level" name="difficulty_level" required>
+                    <option value="">Select difficulty...</option>
+                    {% for level in levels %}
+                    <option value="{{ level.id }}">{{ level.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="yarn_weight_id">Yarn Weight:</label>
+                <select id="yarn_weight_id" name="yarn_weight_id">
+                    <option value="">Select yarn weight...</option>
+                    {% for yarn_weight in yarn_weights %}
+                    <option value="{{ yarn_weight.weight_id }}">{{ yarn_weight.weight_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="gauge_stitches_p4inch">Gauge - Stitches per 4 inches:</label>
+                <input type="number" id="gauge_stitches_p4inch" name="gauge_stitches_p4inch" step="0.1" min="0" placeholder="e.g., 18">
+                <small>Number of stitches in a 4-inch gauge swatch</small>
+            </div>
+            <div class="form-group">
+                <label for="gauge_rows_p4inch">Gauge - Rows per 4 inches:</label>
+                <input type="number" id="gauge_rows_p4inch" name="gauge_rows_p4inch" step="0.1" min="0" placeholder="e.g., 24">
+                <small>Number of rows in a 4-inch gauge swatch</small>
+            </div>
+            <div class="form-group">
+                <label for="features">Features:</label>
+                <select id="features" name="features" multiple size="6" style="width:100%">
+                    {% for feature in features %}
+                        <option value="{{ feature.id }}">{{ feature.description }}</option>
+                    {% endfor %}
+                </select>
+                <small>Hold Ctrl (Windows) or Command (Mac) to select multiple features.</small>
+            </div>
+            <div class="form-group">
+                <label for="gauge_measurement">Gauge Measurement (Image):</label>
+                <input type="file" id="gauge_measurement" name="gauge_measurement" accept="image/*">
+            </div>
+            <div class="form-group">
+                <label for="needle_type">Needle Type:</label>
+                <select id="needle_type" name="needle_type" required>
+                    <option value="">Select needle type...</option>
+                    <option value="Straight">Straight</option>
+                    <option value="Circular">Circular</option>
+                    <option value="Double-Pointed">Double-Pointed</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="additional_details">Additional Details:</label>
+                <textarea id="additional_details" name="additional_details" maxlength="150" rows="2"></textarea>
+            </div>
+        </div>
+        <div class="column">
+            <div class="form-group">
+                <label for="schematic">Schematic (Image):</label>
+                <input type="file" id="schematic" name="schematic" accept="image/*">
+                <small>Upload a schematic image (JPG, PNG, etc.)</small>
+            </div>
+            <div class="form-group">
+                <label for="picture1">Picture 1 (Image):</label>
+                <input type="file" id="picture1" name="picture1" accept="image/*">
+                <small>Upload a picture (JPG, PNG, etc.)</small>
+            </div>
+            <div class="form-group">
+                <label for="picture2">Picture 2 (Image):</label>
+                <input type="file" id="picture2" name="picture2" accept="image/*">
+                <small>Upload a picture (JPG, PNG, etc.)</small>
+            </div>
+            <div class="form-group">
+                <label for="picture3">Picture 3 (Image):</label>
+                <input type="file" id="picture3" name="picture3" accept="image/*">
+                <small>Upload a picture (JPG, PNG, etc.)</small>
+            </div>
+            <div class="form-group">
+                <input type="checkbox" id="is_active" name="is_active" checked>
+                <label for="is_active">Active</label>
+            </div>
+            <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ current_user.full_name }} at (auto-set on save)</p>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-sm">Create</button>
+        <a href="{{ url_for('patterns_list') }}" class="btn btn-sm">Cancel</a>
+    </div>
+</form>
+{% endblock %}

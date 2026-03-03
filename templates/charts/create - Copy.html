@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header" style="margin-bottom: 15px;">
+    <h2 style="margin: 0;">
+        Charts for Pattern{% if pattern_name %} - {{ pattern_name }}{% endif %}
+        {% if edit_mode %} (Edit Chart){% else %} (Create Chart){% endif %}
+    </h2>
+</div>
+
+<form method="POST" style="max-width: 600px;">
+    {% include "charts/create_fixed.html" %}
+                    cellImg.style.display = 'none';
+                    cellImg.style.margin = 'auto';
+                    // If preValue, show image
+                    if (preValue) {
+                        cellImg.src = `/elements/${preValue}/symbol`;
+                        cellImg.style.display = 'block';
+                    }
+                    td.appendChild(cellImg);
+
+                    // Add delete button to clear cell
+                    let deleteBtn = document.createElement('button');
+                    deleteBtn.type = 'button';
+                    deleteBtn.innerHTML = '&#x2715;'; // X icon
+                    deleteBtn.title = 'Clear cell';
+                    deleteBtn.style.position = 'absolute';
+                    deleteBtn.style.top = '2px';
+                    deleteBtn.style.right = '2px';
+                    deleteBtn.style.width = '12px';
+                    deleteBtn.style.height = '12px';
+                    deleteBtn.style.padding = '0';
+                    deleteBtn.style.fontSize = '10px';
+                    deleteBtn.style.lineHeight = '10px';
+                    deleteBtn.style.background = 'transparent';
+                    deleteBtn.style.border = 'none';
+                    deleteBtn.style.borderRadius = '2px';
+                    deleteBtn.style.cursor = 'pointer';
+                    deleteBtn.style.zIndex = '10';
+                    deleteBtn.style.display = preValue ? 'block' : 'none';
+                    deleteBtn.style.color = '#888';
+                    deleteBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        hiddenInput.value = '';
+                        cellImg.style.display = 'none';
+                        deleteBtn.style.display = 'none';
+                    };
+                    td.appendChild(deleteBtn);
+
+                    // Popover selector
+                    let popover = document.createElement('div');
+                    popover.style.position = 'absolute';
+                    popover.style.top = '100%';
+                    popover.style.left = '50%';
+                    popover.style.transform = 'translateX(-50%)';
+                    popover.style.background = '#fff';
+                    popover.style.border = '1px solid #888';
+                    popover.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                    popover.style.padding = '8px';
+                    popover.style.zIndex = '1000';
+                    popover.style.display = 'none';
+                    popover.style.width = '280px';
+                    popover.style.height = '280px';
+                    popover.style.display = 'none';
+                    popover.style.overflow = 'auto';
+
+                    // 6x6 grid for symbol images
+                    let grid = document.createElement('div');
+                    grid.style.display = 'grid';
+                    grid.style.gridTemplateColumns = 'repeat(6, 1fr)';
+                    grid.style.gridTemplateRows = 'repeat(6, 1fr)';
+                    grid.style.gap = '6px';
+                    grid.style.justifyItems = 'center';
+                    grid.style.alignItems = 'center';
+
+                    // Add blank option
+                    let blankOption = document.createElement('img');
+                    blankOption.src = '';
+                    blankOption.alt = 'No symbol';
+                    blankOption.title = 'No symbol';
+                    blankOption.style.width = '24px';
+                    blankOption.style.height = '24px';
+                    blankOption.style.opacity = '0.2';
+                    blankOption.style.border = '1px solid #eee';
+                    blankOption.style.cursor = 'pointer';
+                    blankOption.onclick = function(e) {
+                        e.stopPropagation();
+                        cellImg.style.display = 'none';
+                        hiddenInput.value = '';
+                        popover.style.display = 'none';
+                    };
+                    grid.appendChild(blankOption);
+
+                    elementsWithSymbols.forEach(e => {
+                        let cellDiv = document.createElement('div');
+                        cellDiv.style.display = 'flex';
+                        cellDiv.style.flexDirection = 'column';
+                        cellDiv.style.alignItems = 'center';
+                        cellDiv.style.justifyContent = 'center';
+                        cellDiv.style.border = '1px solid #eee';
+                        cellDiv.style.padding = '2px';
+                        cellDiv.style.background = '#f9f9f9';
+                        cellDiv.style.width = '120px';
+                        cellDiv.style.height = '90px';
+                        cellDiv.style.overflow = 'hidden';
+                        // Symbol image
+                        let img = document.createElement('img');
+                        if (e.symbol) {
+                            img.src = `data:image/png;base64,${e.symbol}`;
+                        } else {
+                            img.src = '';
+                        }
+                        img.alt = e.description || '';
+                        img.title = e.description || `Symbol ${e.id}`;
+                        img.style.width = '24px';
+                        img.style.height = '24px';
+                        img.style.marginBottom = '2px';
+                        img.style.cursor = 'pointer';
+                        img.onclick = function(ev) {
+                            ev.stopPropagation();
+                            cellImg.src = img.src;
+                            cellImg.style.display = 'block';
+                            hiddenInput.value = e.id;
+                            popover.style.display = 'none';
+                            if (td.querySelector('button')) {
+                                td.querySelector('button').style.display = 'block';
+                            }
+                        };
+                        cellDiv.appendChild(img);
+                        // Type
+                        let typeDiv = document.createElement('div');
+                        typeDiv.textContent = `Type: ${e.type}`;
+                        typeDiv.style.fontSize = '11px';
+                        typeDiv.style.color = '#555';
+                        cellDiv.appendChild(typeDiv);
+                        // Description
+                        let descDiv = document.createElement('div');
+                        descDiv.textContent = `Desc: ${e.description}`;
+                        descDiv.style.fontSize = '11px';
+                        descDiv.style.color = '#333';
+                        descDiv.style.whiteSpace = 'nowrap';
+                        descDiv.style.overflow = 'hidden';
+                        descDiv.style.textOverflow = 'ellipsis';
+                        cellDiv.appendChild(descDiv);
+                        // Abbreviation
+                        let abbrDiv = document.createElement('div');
+                        abbrDiv.textContent = `Abbr: ${e.abbrieviation}`;
+                        abbrDiv.style.fontSize = '11px';
+                        abbrDiv.style.color = '#555';
+                        cellDiv.appendChild(abbrDiv);
+                        grid.appendChild(cellDiv);
+                    });
+                    td.appendChild(popover);
+                popover.appendChild(grid);
+
+                    // Show popover on cell click
+                    td.onclick = function(e) {
+                        e.stopPropagation();
+                        // Hide other popovers and remove highlight from all cells
+                        document.querySelectorAll('.chart-symbol-popover').forEach(p => p.style.display = 'none');
+                        document.querySelectorAll('.cell-highlight').forEach(cell => cell.classList.remove('cell-highlight'));
+                        // Show popover and highlight this cell
+                        popover.style.display = 'flex';
+                        td.classList.add('cell-highlight');
+                    };
+                    popover.classList.add('chart-symbol-popover');
+
+                    // Hide popover on outside click
+                    document.body.addEventListener('click', function(ev) {
+                        if (!td.contains(ev.target)) {
+                            popover.style.display = 'none';
+                            td.classList.remove('cell-highlight');
+                        }
+                    });
+                        // Add highlight style
+                        const style = document.createElement('style');
+                        style.textContent = `.cell-highlight { box-shadow: 0 0 0 2px #1976d2 inset; border-color: #1976d2 !important; }`;
+                        document.head.appendChild(style);
+                    tr.appendChild(td);
+                }
+                gridTable.appendChild(tr);
+            }
+        }
+
+        resizeHandle.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            isResizing = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startRows = parseInt(numRowsInput.value) || 1;
+            startCols = parseInt(numColsInput.value) || 1;
+            document.body.style.cursor = 'se-resize';
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isResizing) return;
+            let dx = e.clientX - startX;
+            let dy = e.clientY - startY;
+            // Each 40px dragged horizontally/vertically adds a column/row
+            let newCols = Math.max(1, startCols + Math.round(dx / 40));
+            let newRows = Math.max(1, startRows + Math.round(dy / 40));
+            numRowsInput.value = newRows;
+            numColsInput.value = newCols;
+            let repeatStart = parseInt(repeatStartInput.value) || null;
+            let repeatEnd = parseInt(repeatEndInput.value) || null;
+            // If columns < repeatEnd, set repeatEnd to columns
+            if (newCols < repeatEnd) {
+                repeatEndInput.value = newCols;
+                repeatEnd = newCols;
+            }
+            renderGrid(newRows, newCols, repeatStart, repeatEnd);
+        });
+
+        document.addEventListener('mouseup', function(e) {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = '';
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing grid...');
+            let rows = parseInt(numRowsInput.value) || 1;
+            let cols = parseInt(numColsInput.value) || 1;
+            let repeatStart = parseInt(repeatStartInput.value) || null;
+            let repeatEnd = parseInt(repeatEndInput.value) || null;
+            console.log('Initial values:', rows, cols, repeatStart, repeatEnd);
+            renderGrid(rows, cols, repeatStart, repeatEnd);
+        });
+        [numRowsInput, numColsInput, repeatStartInput, repeatEndInput].forEach(input => {
+            input.addEventListener('input', function() {
+                let rows = parseInt(numRowsInput.value) || 1;
+                let cols = parseInt(numColsInput.value) || 1;
+                let repeatStart = parseInt(repeatStartInput.value) || null;
+                let repeatEnd = parseInt(repeatEndInput.value) || null;
+                renderGrid(rows, cols, repeatStart, repeatEnd);
+            });
+        });
+    </script>
+        <div style="margin-bottom: 8px;">
+            <label for="instructions" style="display: block; margin-bottom: 3px;">Instructions:</label>
+            <textarea id="instructions" name="instructions" maxlength="100" rows="2" style="width: 100%; max-width: 500px; padding: 4px 8px;">{{ chart.instructions if chart else '' }}</textarea>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <label for="created_by" style="display: block; margin-bottom: 3px;">Updated By:</label>
+            <input type="text" id="created_by" name="created_by" value="{{ current_user.username }}" style="width: 150px; padding: 4px 8px;">
+        </div>
+        <div>
+            <button type="submit" class="btn btn-primary btn-sm" style="height:32px;">{% if edit_mode %}Update Chart{% else %}Create Chart{% endif %}</button>
+            <a href="{{ url_for('charts_list', pattern_id=pattern_id) }}" class="btn btn-sm" style="height:32px; line-height: 22px;">Cancel</a>
+        </div>
+    </form>
+    <script>
+    // Prevent save if repeat end > columns
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const cols = parseInt(document.getElementById('num_columns').value) || 1;
+        const repeatEnd = parseInt(document.getElementById('repeat_column_end').value) || 0;
+        if (repeatEnd > cols) {
+            alert('Repeat End cannot be greater than the number of columns.');
+            e.preventDefault();
+        }
+    });
+    </script>
+        </div>
+     </form>
+{% endblock %}

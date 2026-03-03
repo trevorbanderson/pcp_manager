@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Levels of Difficulty{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Levels of Difficulty</h2>
+    <a href="{{ url_for('level_of_difficulty_create') }}" class="btn btn-primary">Add Level</a>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Seq</th>
+            <th>Symbol</th>
+            <th>Active?</th>
+            <th>Updated By</th>
+            <th>Updated At</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for level in levels %}
+        <tr>
+            <td>{{ level.id }}</td>
+            <td>{{ level.name }}</td>
+            <td>{{ level.seq }}</td>
+            <td>
+                {% if level.symbol %}
+                    <img src="data:image/jpeg;base64,{{ level.symbol | b64encode }}" style="width: 160px; height: 25px; background: #fff; padding: 2px; image-rendering: auto; border: 1px solid #ccc;">
+                {% else %}-{% endif %}
+            </td>
+            <td>{{ 'Yes' if level.is_active else 'No' }}</td>
+            <td>{{ level.created_by }}</td>
+            <td>{{ level.created_at | fmt_dt }}</td>
+            <td class="actions">
+                <a href="{{ url_for('level_of_difficulty_edit', id=level.id) }}" class="btn btn-sm">Edit</a>
+                <form method="POST" action="{{ url_for('level_of_difficulty_delete', id=level.id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

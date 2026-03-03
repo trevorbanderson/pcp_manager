@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if pattern_name %}
+        Charts for Pattern {{ pattern_name }}
+    {% else %}
+        Charts
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header" style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h2 style="margin-bottom: 8px;">
+            {% if pattern_name %}
+                Charts for Pattern {{ pattern_name }}
+            {% else %}
+                Charts
+            {% endif %}
+        </h2>
+        <a href="{{ url_for('patterns_edit', id=pattern_id) }}" class="btn btn-secondary" style="margin-bottom: 8px;">Return to Pattern</a>
+    </div>
+    <a href="{{ url_for('charts_create', pattern_id=pattern_id) }}" class="btn btn-primary">Add New Chart</a>
+</div>
+
+{% if charts %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th title="Primary key for the chart">ID</th>
+            <th title="Name for the chart">Name</th>
+            <th title="User who added the chart">Updated By</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for chart in charts %}
+        <tr>
+            <td>{{ chart.id }}</td>
+            <td>{{ chart.name }}</td>
+            <td>{{ chart.created_by }}</td>
+            <td>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <a href="{{ url_for('charts_edit', id=chart.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                    <form method="POST" action="{{ url_for('charts_delete', id=chart.id) }}" style="display:inline; margin:0;">
+                        <input type="hidden" name="pattern_id" value="{{ pattern_id }}">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this chart?');">Delete</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No charts found. <a href="{{ url_for('charts_create') }}">Add the first one!</a></p>
+{% endif %}
+{% endblock %}

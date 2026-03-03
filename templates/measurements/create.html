@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Add Measurement{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 15px;">
+    <h2 style="margin: 0;">Add Measurement</h2>
+</div>
+
+<form method="POST" style="max-width: 600px;">
+    <div style="margin-bottom: 8px;">
+        <label for="body_part_id" style="display: block; margin-bottom: 3px;">Body Part:</label>
+        <select id="body_part_id" name="body_part_id" style="width: 250px; padding: 4px 8px;" required>
+            <option value="">-- Select Body Part --</option>
+            {% for bp in body_parts %}
+                <option value="{{ bp['id'] }}">{{ bp['name'] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div style="margin-bottom: 8px;">
+        <label for="age_id" style="display: block; margin-bottom: 3px;">Age Group:</label>
+        <select id="age_id" name="age_id" style="width: 170px; padding: 4px 8px;" required>
+            <option value="">-- Select Age Group --</option>
+            {% for age in ages %}
+                <option value="{{ age['id'] }}">{{ age['name'] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div style="margin-bottom: 8px;">
+        <label for="size_id" style="display: block; margin-bottom: 3px;">Size:</label>
+        <select id="size_id" name="size_id" style="width: 170px; padding: 4px 8px;" required onchange="showSizeAbbr(this)">
+            <option value="">-- Select Size --</option>
+            {% for size in sizes %}
+                <option value="{{ size['id'] }}" data-abbr="{{ size['abbreviation']|default('') }}">{{ size['name'] }}</option>
+            {% endfor %}
+        </select>
+        <div id="size-abbr" style="margin-top: 2px; color: #888; font-size: 0.95em;"></div>
+    </div>
+    <script>
+    function showSizeAbbr(sel) {
+        var abbr = sel.options[sel.selectedIndex].getAttribute('data-abbr') || '';
+        document.getElementById('size-abbr').textContent = abbr ? 'Abbreviation: ' + abbr : '';
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        var sel = document.getElementById('size_id');
+        if (sel) showSizeAbbr(sel);
+        sel && sel.addEventListener('change', function() { showSizeAbbr(this); });
+    });
+    </script>
+    <div style="margin-bottom: 8px;">
+        <label for="gender_id" style="display: block; margin-bottom: 3px;">Gender:</label>
+        <select id="gender_id" name="gender_id" style="width: 120px; padding: 4px 8px;" required>
+            <option value="">-- Select Gender --</option>
+            {% for g in genders %}
+                <option value="{{ g['id'] }}">{{ g['name'] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div style="margin-bottom: 8px;">
+        <label for="measurement" style="display: block; margin-bottom: 3px;">Measurement:</label>
+        <input type="number" id="measurement" name="measurement" step="0.1" style="width: 120px; padding: 4px 8px;" required>
+    </div>
+    
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ current_user.full_name }} at (auto-set on save)</p>
+    <div>
+        <button type="submit" class="btn btn-primary btn-sm">Create</button>
+        <a href="{{ url_for('measurements_list') }}" class="btn">Cancel</a>
+    </div>
+</form>
+{% endblock %}

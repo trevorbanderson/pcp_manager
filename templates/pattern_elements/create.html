@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Add Pattern Element{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 15px;">
+    <h2 style="margin: 0; display: inline-block;">Add Pattern Element</h2>
+    <a href="{{ url_for('pattern_elements_list') }}" class="btn btn-secondary" style="float: right;">Back to List</a>
+</div>
+
+<form method="POST">
+    <div style="margin-bottom: 8px; display: flex; gap: 24px;">
+        <div>
+            <label for="pattern_id" style="display: block; margin-bottom: 3px;">Pattern:</label>
+            <select id="pattern_id" name="pattern_id" required style="padding: 4px 8px; width: 220px;">
+                <option value="">Select a pattern...</option>
+                {% for pattern in patterns %}
+                <option value="{{ pattern['id'] }}" {% if selected_pattern_id == pattern['id']|string %}selected{% endif %}>{{ pattern['name'] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="type" style="display: block; margin-bottom: 3px;">Type:</label>
+            <select id="type" name="type" style="padding: 4px 8px; width: 220px;">
+                <option value="">All types...</option>
+                {% for t in types %}
+                <option value="{{ t['type'] }}" {% if selected_type == t['type'] %}selected{% endif %}>{{ t['type'] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <script>
+        document.getElementById('pattern_id').onchange = function() {
+            var type = document.getElementById('type').value;
+            var url = '?pattern_id=' + this.value;
+            if (type) url += '&type=' + encodeURIComponent(type);
+            window.location = url;
+        };
+        document.getElementById('type').onchange = function() {
+            var pattern_id = document.getElementById('pattern_id').value;
+            var url = '';
+            if (pattern_id) url += '?pattern_id=' + pattern_id;
+            if (this.value) url += (url ? '&' : '?') + 'type=' + encodeURIComponent(this.value);
+            window.location = url;
+        };
+        </script>
+    </div>
+
+    <div style="margin-bottom: 8px;">
+        <label for="element_id" style="display: block; margin-bottom: 3px;">Element:</label>
+            <div id="custom-element-dropdown" style="position: relative; width: 800px;">
+                <input type="hidden" id="element_id" name="element_id" required>
+                <div id="element-dropdown-selected" style="border: 1px solid #ccc; padding: 4px 8px; background: #fff; cursor: pointer; width: 100%; position: relative; background-image: url('data:image/svg+xml;utf8,<svg fill=\'gray\' height=\'18\' viewBox=\'0 0 24 24\' width=\'18\' xmlns=\'http://www.w3.org/2000/svg\'><path d=\'M7 10l5 5 5-5z\'/></svg>'); background-repeat: no-repeat; background-position: right 8px center; background-size: 18px 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Select an element...</div>
+                <div id="element-dropdown-table" style="display: none; position: absolute; z-index: 10; background: #fff; border: 1px solid #ccc; max-height: 320px; width: 100%; min-width: 800px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                    <div style="padding: 6px 8px 2px 8px; background: #fafafa; border-bottom: 1px solid #eee;">
+                        <input id="element-dropdown-search" type="text" placeholder="Search..." style="width: 100%; padding: 4px 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 3px;">
+                    </div>
+                    <div style="max-height: 250px; overflow-y: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-family: monospace; font-size: 14px;">
+                            <thead>
+                                <tr style="background: #f5f5f5;">
+                                    <th style="padding: 4px 8px; border-bottom: 1px solid #ddd; text-align:left;" title="Type">Type</th>
+                                    <th style="padding: 4px 8px; border-bottom: 1px solid #ddd; text-align:left;" title="Symbol">Symbol</th>
+                                    <th style="padding: 4px 8px; border-bottom: 1px solid #ddd; text-align:left;" title="Element Description">Description</th>
+                                    <th style="padding: 4px 8px; border-bottom: 1px solid #ddd; text-align:left;" title="Abbreviation">Abbreviation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for element in elements %}
+                                <tr class="element-dropdown-row" data-id="{{ element['id'] }}" style="cursor: pointer; border-bottom: 1px solid #e0e0e0;">
+                                    <td style="padding: 4px 8px; text-align:left;">{{ element['type'] }}</td>
+                                    <td style="padding: 4px 8px; text-align:left;">
+                                        {% if element['symbol'] %}
+                                            <img src="data:image/png;base64,{{ element['symbol'] | b64encode }}" alt="symbol" style="width: 24px; height: 24px; background-color: white; padding: 2px;">
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 4px 8px; text-align:left;">{{ element['description'] }}</td>
+                                    <td style="padding: 4px 8px; text-align:left;">{{ element['abbrieviation'] or 'N/A' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var dropdown = document.getElementById('custom-element-dropdown');
+                var selected = document.getElementById('element-dropdown-selected');
+                var table = document.getElementById('element-dropdown-table');
+                var hiddenInput = document.getElementById('element_id');
+                var rows = dropdown.querySelectorAll('.element-dropdown-row');
+                var search = document.getElementById('element-dropdown-search');
+                selected.addEventListener('click', function(e) {
+                    table.style.display = table.style.display === 'block' ? 'none' : 'block';
+                    if (table.style.display === 'block') {
+                        search.value = '';
+                        filterRows('');
+                        search.focus();
+                    }
+                });
+                rows.forEach(function(row) {
+                    row.addEventListener('click', function() {
+                        var cells = row.querySelectorAll('td');
+                        var label = Array.from(cells).map(function(td) { return td.textContent; }).join(' | ');
+                        selected.textContent = label;
+                        hiddenInput.value = row.getAttribute('data-id');
+                        table.style.display = 'none';
+                    });
+                });
+                document.addEventListener('click', function(e) {
+                    if (!dropdown.contains(e.target)) {
+                        table.style.display = 'none';
+                    }
+                });
+                function filterRows(query) {
+                    query = query.toLowerCase();
+                    rows.forEach(function(row) {
+                        var cells = row.querySelectorAll('td');
+                        // Search in Description, Abbreviation, Type
+                        var text = Array.from(cells).map(function(td) { return td.textContent.toLowerCase(); }).join(' ');
+                        row.style.display = text.indexOf(query) !== -1 ? '' : 'none';
+                    });
+                }
+                search.addEventListener('input', function() {
+                    filterRows(this.value);
+                });
+            });
+            </script>
+    </div>
+
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ current_user.full_name }} at (auto-set on save)</p>
+
+    <div style="margin-top: 12px;">
+        <button type="submit" class="btn btn-primary btn-sm">Create</button>
+        <a href="{{ url_for('pattern_elements_list') }}" class="btn btn-secondary btn-sm">Cancel</a>
+    </div>
+</form>
+{% endblock %}

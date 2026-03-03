@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Yarn Weights{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Yarn Weights</h2>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th title="Primary key for the yarn type">ID</th>
+            <th title="Lace, Super-fine, Fine, Light, Medium, Bulky, Super-Bulky, Jumbo">Weight Name</th>
+            <th title="Gauge range in stockinette stitch to 4 inches / 10cm">Stitches per 4"</th>
+            <th title="Recommended needle size in millimeters">Needle Size (mm)</th>
+            <th title="Recommended needle size in US sizes">Needle Size (US)</th>
+            <th title="Wraps per inch measurement range">Wraps per Inch</th>
+            <th title="Inexpensive Yarn Type">Inexpensive Yarn Type</th>
+            <th title="Mid-Range Yarn Type">Mid-Range Yarn Type</th>
+            <th title="Premium Yarn Type">Premium Yarn Type</th>
+            <th title="Symbol for the yarn weight">Symbol</th>
+            <th title="User who created the yarn weight entry">Updated By</th>
+            <th title="The time when the yarn weight was added to the database">Updated At</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for yarn_weight in yarn_weights %}
+        <tr>
+            <td>{{ yarn_weight.weight_id }}</td>
+            <td>{{ yarn_weight.weight_name }}</td>
+            <td>{{ yarn_weight.lower_stitches_p4inch }}-{{ yarn_weight.upper_stitches_p4inch }}</td>
+            <td>{{ yarn_weight.lower_needle_size_mm }}-{{ yarn_weight.upper_needle_size_mm }}</td>
+            <td>{{ yarn_weight.lower_needle_size_us }}-{{ yarn_weight.upper_needle_size_us }}</td>
+            <td>{{ yarn_weight.wraps_per_inch_lower }}-{{ yarn_weight.wraps_per_inch_upper }}</td>
+            <td>{{ yarn_weight.inexpensive_yarn_type }}</td>
+            <td>{{ yarn_weight.mid_range_yarn_type }}</td>
+            <td>{{ yarn_weight.premium_yarn_type }}</td>
+            <td>
+                {% if yarn_weight.symbol %}
+                    <img src="data:image/png;base64,{{ yarn_weight.symbol|b64encode }}" alt="Symbol" style="max-height: 32px; max-width: 32px;">
+                {% endif %}
+            </td>
+            <td>{{ yarn_weight.created_by or '' }}</td>
+            <td>{{ yarn_weight.created_at | fmt_dt }}</td>
+            <td class="actions">
+                <a href="{{ url_for('yarn_weights_edit', id=yarn_weight.weight_id) }}" class="btn btn-sm">Edit</a>
+                <form method="POST" action="{{ url_for('yarn_weights_delete', id=yarn_weight.weight_id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this yarn weight?');">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

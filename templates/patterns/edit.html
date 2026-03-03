@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Pattern{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <h2 style="margin: 0;">Edit Pattern</h2>
+        <a href="{{ url_for('charts_list') }}?pattern_id={{ pattern.id }}" class="btn btn-info btn-sm">View/Edit Charts</a>
+        <a href="{{ url_for('patterns_list') }}" class="btn btn-secondary btn-sm">Return to Pattern List</a>
+    </div>
+</div>
+<form method="POST" enctype="multipart/form-data" class="two-column-form">
+    <div class="two-column-container">
+        <div class="column">
+            <div class="form-group">
+                <label for="name">Pattern Name:</label>
+                <input type="text" id="name" name="name" value="{{ pattern.name }}" maxlength="50" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <textarea id="description" name="description" maxlength="500" rows="2">{{ pattern.description }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="category_id">Category:</label>
+                <select id="category_id" name="category_id" required>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if category.id == pattern.category_id %}selected{% endif %}>
+                        {{ category.category }} - {{ category.sub_category }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="difficulty_level">Difficulty Level:</label>
+                <select id="difficulty_level" name="difficulty_level" required>
+                    <option value="">Select difficulty...</option>
+                    {% for level in levels %}
+                    <option value="{{ level.id }}" {% if pattern.level_of_difficulty_id == level.id %}selected{% endif %}>{{ level.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="yarn_weight_id">Yarn Weight:</label>
+                <select id="yarn_weight_id" name="yarn_weight_id">
+                    <option value="">Select yarn weight...</option>
+                    {% for yarn_weight in yarn_weights %}
+                    <option value="{{ yarn_weight.weight_id }}" {% if pattern.yarn_weight_id == yarn_weight.weight_id %}selected{% endif %}>{{ yarn_weight.weight_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="gauge_stitches_p4inch">Gauge - Stitches per 4 inches:</label>
+                <input type="number" id="gauge_stitches_p4inch" name="gauge_stitches_p4inch" step="0.1" min="0" value="{{ pattern.gauge_stitches_p4inch or '' }}" placeholder="e.g., 18">
+                <small>Number of stitches in a 4-inch gauge swatch</small>
+            </div>
+            <div class="form-group">
+                <label for="gauge_rows_p4inch">Gauge - Rows per 4 inches:</label>
+                <input type="number" id="gauge_rows_p4inch" name="gauge_rows_p4inch" step="0.1" min="0" value="{{ pattern.gauge_rows_p4inch or '' }}" placeholder="e.g., 24">
+                <small>Number of rows in a 4-inch gauge swatch</small>
+            </div>
+            <div class="form-group">
+                <label for="gauge_measurement">Gauge Measurement (Image):</label>
+                {% if pattern.gauge_measurement %}
+                    <div style="margin-bottom: 8px;">
+                        <img src="{{ url_for('pattern_gauge_measurement', id=pattern.id) }}" alt="Gauge Measurement" style="max-width: 300px; max-height: 300px; display: block; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px;" />
+                        <button type="button" onclick="removeImage('gauge_measurement')" class="btn btn-danger btn-sm" style="margin-top: 5px;">Delete</button>
+                    </div>
+                {% else %}
+                    <input type="file" id="gauge_measurement" name="gauge_measurement" accept="image/*">
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label for="needle_type">Needle Type:</label>
+                <select id="needle_type" name="needle_type" required>
+                    <option value="">Select needle type...</option>
+                    <option value="Straight" {% if pattern.needle_type == 'Straight' %}selected{% endif %}>Straight</option>
+                    <option value="Circular" {% if pattern.needle_type == 'Circular' %}selected{% endif %}>Circular</option>
+                    <option value="Double-Pointed" {% if pattern.needle_type == 'Double-Pointed' %}selected{% endif %}>Double-Pointed</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="features">Features:</label>
+                <select id="features" name="features" multiple size="6" style="width:100%">
+                    {% for feature in features %}
+                        <option value="{{ feature.id }}" {% if feature.id|string in selected_feature_ids %}selected{% endif %}>{{ feature.description }}</option>
+                    {% endfor %}
+                </select>
+                <small>Hold Ctrl (Windows) or Command (Mac) to select multiple features.</small>
+            </div>
+            <div class="form-group">
+                <label for="additional_details">Additional Details:</label>
+                <textarea id="additional_details" name="additional_details" maxlength="150" rows="2">{{ pattern.additional_details or '' }}</textarea>
+            </div>
+        </div>
+        <div class="column">
+            <div class="form-group">
+                <label for="schematic">Schematic (Image):</label>
+                {% if pattern.schematic %}
+                    <div style="margin-bottom: 8px;">
+                        <img src="{{ url_for('pattern_schematic', id=pattern.id) }}" alt="Pattern Schematic" style="max-width: 300px; max-height: 300px; display: block; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px;" />
+                        <button type="button" onclick="removeImage('schematic')" class="btn btn-danger btn-sm" style="margin-top: 5px;">Delete</button>
+                    </div>
+                {% else %}
+                    <input type="file" id="schematic" name="schematic" accept="image/*">
+                {% endif %}
+            </div>
+            {% for idx in [1,2,3] %}
+            <div class="form-group">
+                <label for="picture{{ idx }}">Picture {{ idx }} (Image):</label>
+                {% set pic = pattern['picture' + idx|string] %}
+                {% if pic %}
+                    <div style="margin-bottom: 8px;">
+                        <img src="{{ url_for('pattern_picture', id=pattern.id, pic=idx) }}" alt="Pattern Picture {{ idx }}" style="max-width: 300px; max-height: 300px; display: block; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px;" />
+                        <button type="button" onclick="removeImage('picture{{ idx }}')" class="btn btn-danger btn-sm" style="margin-top: 5px;">Delete</button>
+                    </div>
+                {% else %}
+                    <input type="file" id="picture{{ idx }}" name="picture{{ idx }}" accept="image/*">
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ get_full_name(pattern.created_by) }} at {{ pattern.created_at | fmt_dt }}</p>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-sm">Update</button>
+        <a href="{{ url_for('patterns_list') }}" class="btn btn-secondary btn-sm">Cancel</a>
+    </div>
+    <input type="hidden" id="remove_image_field" name="remove_image" value="">
+</form>
+<script>
+function removeImage(field) {
+    document.getElementById('remove_image_field').value = field;
+    document.querySelector('form').submit();
+    // Force reload of the edit page in the same tab after form submission
+    setTimeout(function() {
+        window.location.href = window.location.pathname + window.location.search;
+    }, 100);
+}
+</script>
+{% endblock %}

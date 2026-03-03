@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Ages{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Ages</h2>
+    <a href="{{ url_for('age_create') }}" class="btn btn-primary">Add New</a>
+</div>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Abbreviation</th>
+            <th>Seq</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for age in ages %}
+        <tr>
+            <td>{{ age['id'] }}</td>
+            <td>{{ age['name'] }}</td>
+            <td>{{ age['abbreviation'] }}</td>
+            <td>{{ age['seq'] }}</td>
+            <td>
+                <a href="{{ url_for('age_edit', id=age['id']) }}" class="btn btn-sm">Edit</a>
+                <form method="POST" action="{{ url_for('age_delete', id=age['id']) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this age?');">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

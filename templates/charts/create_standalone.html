@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chart Creation Test - Standalone</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .form-row { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input, select { padding: 8px; }
+    </style>
+</head>
+<body>
+    <h1>Chart Creation Test - Standalone</h1>
+    
+    <form method="POST" id="chartForm">
+        <div class="form-row">
+            <label for="piece_id">Piece:</label>
+            <select id="piece_id" name="piece_id" required>
+                <option value="">Select Piece</option>
+                {% for piece in pieces %}
+                <option value="{{ piece.id }}">{{ piece.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-row">
+            <label for="name">Chart Name:</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+        
+        <div class="form-row">
+            <label for="num_rows">Rows:</label>
+            <input type="number" id="num_rows" name="num_rows" min="1" value="10" required>
+        </div>
+        
+        <div class="form-row">
+            <label for="num_columns">Columns:</label>
+            <input type="number" id="num_columns" name="num_columns" min="1" value="10" required>
+        </div>
+        
+        <div class="form-row">
+            <button type="submit">Create Chart</button>
+            <a href="/charts">Cancel</a>
+        </div>
+    </form>
+
+    <script>
+        alert('STANDALONE TEST - Script loading immediately');
+        
+        window.addEventListener('load', function() {
+            alert('WINDOW LOAD EVENT - Page fully loaded');
+            
+            const pieceSelect = document.getElementById('piece_id');
+            const nameInput = document.getElementById('name');
+            
+            console.log('Piece select element:', pieceSelect);
+            console.log('Name input element:', nameInput);
+            
+            if (pieceSelect && nameInput) {
+                alert('SUCCESS - Both elements found');
+                
+                pieceSelect.addEventListener('change', function() {
+                    const selectedValue = this.value;
+                    const selectedText = this.options[this.selectedIndex].text;
+                    
+                    alert('Piece changed - Value: ' + selectedValue + ', Text: ' + selectedText);
+                    
+                    if (selectedValue && selectedText !== 'Select Piece') {
+                        const chartName = 'Chart for ' + selectedText;
+                        nameInput.value = chartName;
+                        alert('Chart name set to: ' + chartName);
+                    } else {
+                        nameInput.value = '';
+                        alert('Chart name cleared');
+                    }
+                });
+                
+                alert('Event listener attached successfully');
+            } else {
+                alert('ERROR - Elements not found: piece=' + !!pieceSelect + ', name=' + !!nameInput);
+            }
+        });
+    </script>
+</body>
+</html>

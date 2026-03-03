@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Local environment config (secrets must NOT go into the image)
+.env
+
+# Logs
+logs/
+*.log
+
+# Git
+.git/
+.gitignore
+
+# Editor / IDE
+.vscode/
+*.swp
+*.swo
+
+# VPN clients (not needed in container)
+vpnclient/
+vpnclient_final/
+vpnclient_updated/
+
+# Bicep / IaC (not needed at runtime)
+bicep/
+azure-pipelines.yml
+
+# Tests / docs
+*.md

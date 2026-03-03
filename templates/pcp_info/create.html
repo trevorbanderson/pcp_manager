@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Create PCP Info{% endblock %}
+{% block content %}
+<div style="margin-bottom: 15px;">
+    <h2 style="margin: 0; display: inline-block;">Create PCP Info</h2>
+    <a href="{{ url_for('pcp_info_list') }}" class="btn btn-secondary" style="float: right;">Back to List</a>
+</div>
+<form method="POST">
+    <div style="display: flex; flex-direction: column; gap: 14px; max-width: 500px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <label for="type" style="width: 180px;">Type:</label>
+            <input type="text" id="type" name="type" required style="padding: 4px 8px; width: 220px; height: 36px;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+                        <label for="text_to_display" style="width: 180px;">Text to Display:</label>
+                        <div class="quill-wrapper">
+                            <div id="quill_text_to_display"></div>
+                            <div id="quill_toolbar">
+                                <span class="ql-formats">
+                                    <button class="ql-bold"></button>
+                                    <button class="ql-italic"></button>
+                                    <button class="ql-underline"></button>
+                                    <button class="ql-strike"></button>
+                                </span>
+                                <span class="ql-formats">
+                                    <button class="ql-list" value="ordered"></button>
+                                    <button class="ql-list" value="bullet"></button>
+                                </span>
+                                <span class="ql-formats">
+                                    <button class="ql-link"></button>
+                                    <button class="ql-image"></button>
+                                </span>
+                                <span class="ql-formats">
+                                    <button class="ql-clean"></button>
+                                </span>
+                            </div>
+                        </div>
+                        <textarea id="text_to_display" name="text_to_display" required style="display:none;"></textarea>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <label for="is_active" style="width: 180px;">Is Active:</label>
+            <select id="is_active" name="is_active" style="width: 120px; height: 36px;">
+                <option value="true" selected>True</option>
+                <option value="false">False</option>
+            </select>
+        </div>
+        <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ current_user.full_name }} at (auto-set on save)</p>
+    </div>
+    <div style="margin-top: 18px;">
+        <button type="submit" class="btn btn-primary btn-sm">Create</button>
+        <a href="{{ url_for('pcp_info_list') }}" class="btn btn-secondary btn-sm">Cancel</a>
+    </div>
+</form>
+{% endblock %}
