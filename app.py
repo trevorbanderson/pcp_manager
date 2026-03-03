@@ -2415,6 +2415,16 @@ if __name__ == '__main__':
     _parser.add_argument('--port', '-p', type=int, default=5000)
     _args, _ = _parser.parse_known_args()
     _env = os.getenv('ENVIRONMENT', 'dev')
+    # Attempt to connect to the database at container startup
+    from database import get_db_connection
+    try:
+        conn = get_db_connection()
+        conn.close()
+        _log.info("Database connection test succeeded at startup.")
+    except Exception as db_exc:
+        _log.error(f"Database connection test failed at startup: {db_exc}")
+        import sys
+        sys.exit(1)
     # Only enable debug for 'dev' environment
     app.run(debug=(_env == 'dev'), host='0.0.0.0', port=_args.port)
 
