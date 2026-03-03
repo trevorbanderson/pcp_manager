@@ -140,7 +140,7 @@ resource kvRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' =
   name: guid(keyVault.id, containerApp.id, kvSecretsUserRoleId)
   scope: keyVault
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', kvSecretsUserRoleId)
+    roleDefinitionId: '/providers/Microsoft.Authorization/roleDefinitions/${kvSecretsUserRoleId}'
     principalId: containerApp.identity.principalId
     principalType: 'ServicePrincipal'
   }
