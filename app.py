@@ -2470,15 +2470,26 @@ if __name__ == '__main__':
     _env = os.getenv('ENVIRONMENT', 'dev')
     # Attempt to connect to the database at container startup
     from database import get_db_connection
+    _log.info(
+        "DB config at startup",
+        extra={
+            "DB_HOST":    Config.DB_HOST,
+            "DB_PORT":    Config.DB_PORT,
+            "DB_NAME":    Config.DB_NAME,
+            "DB_USER":    Config.DB_USER,
+            "DB_SSLMODE": os.getenv('DB_SSLMODE', 'not set'),
+        }
+    )
     try:
         _log.debug("Attempting database connection at startup...")
         conn = get_db_connection()
         conn.close()
         _log.info("Database connection test succeeded at startup.")
     except Exception as db_exc:
-        _log.error(f"Database connection test failed at startup: {db_exc}", exc_info=True)
-        import sys
-        sys.exit(1)
+        _log.warning(
+            f"Database connection test failed at startup (app will still start): {db_exc}",
+            exc_info=True,
+        )
     # Only enable debug for 'dev' environment
     app.run(debug=(_env == 'dev'), host='0.0.0.0', port=_args.port)
 
