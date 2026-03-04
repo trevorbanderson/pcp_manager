@@ -14,6 +14,23 @@ _log.setLevel('DEBUG')  # Force DEBUG for all environments
 
 # Log startup config and environment
 import platform
+from config import Config
+from database import execute_query
+from datetime import datetime, timedelta
+import base64
+import io
+import pyDMNrules
+import os
+import secrets
+import smtplib
+import qrcode
+import pyotp
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from werkzeug.utils import secure_filename
+import pandas as pd
+
+# Log startup config and environment (after Config is imported)
 _log.info(
     f"App startup: ENV={_active_env}, Python={platform.python_version()}, Host={platform.node()}",
     extra={
