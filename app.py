@@ -1,3 +1,7 @@
+import atexit
+def _shutdown_log():
+    _log.info("App shutdown.")
+atexit.register(_shutdown_log)
 
 # ── Environment must be bootstrapped before Config is imported ──────────────
 import set_env
@@ -5,7 +9,20 @@ _active_env = set_env.setup()  # loads .env section + Azure Key Vault secrets in
 # ────────────────────────────────────────────────────────────────────────────
 
 import pcp_logger as _pcp_logger
-_log = _pcp_logger.setup(_active_env)   # configure logging for this environment
+_log = _pcp_logger.setup(_active_env)
+_log.setLevel('DEBUG')  # Force DEBUG for all environments
+
+# Log startup config and environment
+import platform
+_log.info(
+    f"App startup: ENV={_active_env}, Python={platform.python_version()}, Host={platform.node()}",
+    extra={
+        "env": _active_env,
+        "python_version": platform.python_version(),
+        "host": platform.node(),
+        "config": {k: getattr(Config, k) for k in dir(Config) if k.isupper()}
+    }
+)
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user
@@ -26,9 +43,17 @@ from email.mime.multipart import MIMEMultipart
 from werkzeug.utils import secure_filename
 import pandas as pd
 
+
 app = Flask(__name__)
 app.config.from_object(Config)
 app.secret_key = Config.SECRET_KEY
+
+# ---------------------------------------------------------------------------
+# Test-only route for error handling tests (must be after app is defined)
+# ---------------------------------------------------------------------------
+@app.route('/fail')
+def fail():
+    raise Exception('fail!')
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -118,6 +143,7 @@ def load_user(user_id):
 # Email OTP helper
 # ---------------------------------------------------------------------------
 def send_otp_email(to_email, otp_code):
+    _log.debug(f"send_otp_email called: to_email={to_email}, otp_code={otp_code}")
     msg = MIMEMultipart()
     msg['From']    = Config.MAIL_FROM
     msg['To']      = to_email
@@ -174,17 +200,24 @@ def handle_exception(exc):
     """Log unhandled exceptions (500-level errors)."""
     import traceback as _tb
     _log.error(
-        f"Unhandled exception: {exc}",
+        f"Exception handler triggered: {exc}",
         extra={
-            "path":      request.path,
-            "method":    request.method,
-            "ip":        request.remote_addr,
+            "path": request.path,
+            "method": request.method,
+            "ip": request.remote_addr,
             "traceback": _tb.format_exc(),
         },
         exc_info=True,
     )
-    # Re-raise so Flask shows its default 500 page in dev or a clean page in prod
-    raise exc
+    from werkzeug.exceptions import NotFound
+    if isinstance(exc, NotFound):
+        from flask import Response
+        return Response("404 Not Found", status=404)
+    # Only re-raise in debug mode; otherwise, return a 500 response
+    from flask import Response, current_app
+    if current_app.config.get('DEBUG', False):
+        raise exc
+    return Response("500 Internal Server Error", status=500)
 
 
 # ---------------------------------------------------------------------------
@@ -192,6 +225,7 @@ def handle_exception(exc):
 # ---------------------------------------------------------------------------
 @app.route('/login', methods=['GET', 'POST'], endpoint='login')
 def login():
+    _log.debug(f"Login route called: method={request.method}, data={request.form.to_dict()}")
     if current_user.is_authenticated:
         return redirect(url_for('index'))
 
@@ -247,6 +281,7 @@ def login():
 
 @app.route('/mfa/verify', methods=['GET', 'POST'], endpoint='mfa_verify')
 def mfa_verify():
+    _log.debug(f"MFA verify route called: method={request.method}, data={request.form.to_dict()}")
     user_id = session.get('mfa_user_id')
     if not user_id:
         return redirect(url_for('login'))
@@ -1489,6 +1524,7 @@ def charts_list():
 @app.route('/api/calculate_chart_dimensions', methods=['POST'])
 def api_calculate_chart_dimensions():
     """API endpoint to calculate chart dimensions using DMN rules"""
+    _log.debug(f"API /api/calculate_chart_dimensions called: method={request.method}, json={request.get_json()}")
     try:
         data = request.get_json()
         print(f"[API] /api/calculate_chart_dimensions payload: {data}")
@@ -2418,11 +2454,12 @@ if __name__ == '__main__':
     # Attempt to connect to the database at container startup
     from database import get_db_connection
     try:
+        _log.debug("Attempting database connection at startup...")
         conn = get_db_connection()
         conn.close()
         _log.info("Database connection test succeeded at startup.")
     except Exception as db_exc:
-        _log.error(f"Database connection test failed at startup: {db_exc}")
+        _log.error(f"Database connection test failed at startup: {db_exc}", exc_info=True)
         import sys
         sys.exit(1)
     # Only enable debug for 'dev' environment
