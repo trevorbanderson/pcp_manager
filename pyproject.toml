@@ -20,7 +20,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 # Relax bugbear and unused-import rules inside the test suite
-"tests/*" = ["F811", "F401", "B", "E711"]
+"tests/*" = ["F811", "F401", "B", "E711", "I"]
 
 [tool.bandit]
 # B101: assert in tests is fine; B311: random is non-crypto intentionally (OTP uses secrets)

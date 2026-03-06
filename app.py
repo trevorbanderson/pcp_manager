@@ -2194,7 +2194,7 @@ def charts_pdf(id):
 
     from flask import send_file
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.pagesizes import A4
     from reportlab.lib.utils import ImageReader
     from reportlab.pdfgen import canvas as rl_canvas
 
@@ -2449,7 +2449,7 @@ def charts_pdf(id):
             section_visible_rows.update(b['visible_rows'])
         seen_ids_sec: set = set()
         section_legend_elements = []
-        for (row, col), elem in sorted(cell_data.items()):
+        for (row, _col), elem in sorted(cell_data.items()):
             if row in section_visible_rows:
                 eid = elem.get('element_id')
                 if eid not in seen_ids_sec:
