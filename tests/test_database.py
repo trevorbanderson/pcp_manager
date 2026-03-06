@@ -6,8 +6,9 @@ import database
 
 
 def test_get_db_connection(monkeypatch):
-    # Patch psycopg.connect to avoid real DB connection
-    with mock.patch('database.psycopg.connect') as mock_connect:
+    # Patch both Config.get_db_password (avoids Key Vault call) and psycopg.connect
+    with mock.patch('config.Config.get_db_password', return_value='testpass'), \
+         mock.patch('database.psycopg.connect') as mock_connect:
         conn = database.get_db_connection()
         assert mock_connect.called
         assert conn == mock_connect.return_value

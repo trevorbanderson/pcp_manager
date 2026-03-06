@@ -12,7 +12,12 @@ def test_load_env_config_missing_file(tmp_path, monkeypatch):
     result = set_env.load_env_config('dev', '.env')
     assert result == {}
 
-def test_get_kv_config_returns_singleton():
+def test_get_kv_config_returns_singleton(monkeypatch):
+    monkeypatch.setenv('AZURE_KEY_VAULT_URL', 'https://test.vault.azure.net/')
+    monkeypatch.setattr(set_env.AzureKeyVaultConfig, '_init_client', lambda self: None)
+    monkeypatch.setattr(set_env.AzureKeyVaultConfig, 'load_all_secrets', lambda self: {})
+    monkeypatch.setattr(set_env.AzureKeyVaultConfig, 'set_environment_variables', lambda self: None)
+    set_env._kv_instance = None
     kv1 = set_env.get_kv_config('dev')
     kv2 = set_env.get_kv_config('dev')
     assert kv1 is kv2
@@ -27,6 +32,7 @@ def test_kv_from_env(monkeypatch):
             del os.environ['WEB-SECRET']
         print('After delete, os.environ.get:', os.environ.get('WEB-SECRET'))
         monkeypatch.setenv('WEB_SECRET', 'testsecret')
+        monkeypatch.setenv('AZURE_KEY_VAULT_URL', 'https://test.vault.azure.net/')
         print('After setenv, os.environ[WEB-SECRET]:', os.environ.get('WEB-SECRET'))
         monkeypatch.setattr(set_env.AzureKeyVaultConfig, '_init_client', lambda self: None)
         # Patch load_all_secrets and set_environment_variables to do nothing
