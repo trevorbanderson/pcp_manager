@@ -374,7 +374,14 @@ def setup(environment: Optional[str] = None) -> str:
     env_setup = EnvironmentSetup()
     # Build a minimal parser (no --host/--port – Flask handles those)
     parser = env_setup.create_parser()
-    env_setup.parse_and_setup(parser)
+
+    # When imported by pytest (or any non-CLI context), sys.argv contains test
+    # paths / pytest flags that would fail the choices validation on the
+    # positional `environment_pos` argument.  Pass argv=[] so the parser sees
+    # no arguments and falls back to the ENVIRONMENT env var.
+    is_pytest = any('pytest' in arg or 'py.test' in arg for arg in sys.argv[:1])
+    argv = [] if is_pytest else None
+    env_setup.parse_and_setup(parser, argv=argv)
 
     _setup_done = True
     return env_setup.get_environment()
