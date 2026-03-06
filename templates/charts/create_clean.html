@@ -139,6 +139,9 @@
     <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
         <button type="submit" id="submit-btn" class="btn btn-primary" style="height: 38px;" {% if not edit_mode %}disabled{% endif %}>{% if edit_mode %}Update Chart{% else %}Create Chart{% endif %}</button>
         <a href="{% if pattern_id %}/charts?pattern_id={{ pattern_id }}{% else %}/charts{% endif %}" class="btn btn-secondary" style="height: 38px; display: flex; align-items: center; justify-content: center;">Cancel</a>
+        {% if edit_mode %}
+        <a href="/charts/{{ chart.id }}/pdf" class="btn pdf-btn" style="height: 38px; display: flex; align-items: center; justify-content: center; background: #6f42c1; color: white;">Download PDF</a>
+        {% endif %}
     </div>
 </form>
 
@@ -264,6 +267,14 @@
         <div style="margin-bottom: 15px;">
             <label for="sectionInstructions" style="display: block; margin-bottom: 5px; font-size: 13px;">Instructions (optional):</label>
             <textarea id="sectionInstructions" rows="3" placeholder="e.g., Work in stockinette stitch" style="width: 100%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; font-family: inherit; font-size: 13px;"></textarea>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                <input type="checkbox" id="sectionIncludeInPdf" style="width: 16px; height: 16px; cursor: pointer;" checked>
+                Include in PDF export
+            </label>
+            <div style="font-size: 11px; color: #666; margin-top: 3px;">When checked, this section's rows will appear in the downloaded PDF chart</div>
         </div>
         
         <div style="margin-bottom: 15px;">
@@ -700,6 +711,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         currentEditingSectionIndex = editIndex;
         
+        const includeInPdfCheckbox = document.getElementById('sectionIncludeInPdf');
+
         if (editIndex !== null && rowSections[editIndex]) {
             // Editing existing section
             const section = rowSections[editIndex];
@@ -709,6 +722,7 @@ document.addEventListener('DOMContentLoaded', function() {
             repeatInput.value = section.repeatCount;
             instructionsInput.value = section.instructions || '';
             labelInput.value = section.label || '';
+            if (includeInPdfCheckbox) includeInPdfCheckbox.checked = section.includeInPdf !== false;
             currentEditingSubsections = section.rowSubsections ? [...section.rowSubsections] : [];
             
             startInput.max = gridRows;
@@ -721,6 +735,7 @@ document.addEventListener('DOMContentLoaded', function() {
             repeatInput.value = 1;
             instructionsInput.value = '';
             labelInput.value = '';
+            if (includeInPdfCheckbox) includeInPdfCheckbox.checked = true;
             currentEditingSubsections = [];
             
             startInput.max = gridRows;
@@ -750,11 +765,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const instructionsInput = document.getElementById('sectionInstructions');
         const labelInput = document.getElementById('sectionLabel');
         
+        const includeInPdfCheckbox = document.getElementById('sectionIncludeInPdf');
         const startRow = parseInt(startInput.value);
         const endRow = parseInt(endInput.value);
         const repeatCount = parseInt(repeatInput.value);
         const instructions = instructionsInput.value.trim();
         const label = labelInput.value.trim();
+        const includeInPdf = includeInPdfCheckbox ? includeInPdfCheckbox.checked : true;
         
         // Validation
         if (isNaN(startRow) || isNaN(endRow) || isNaN(repeatCount)) {
@@ -818,6 +835,7 @@ document.addEventListener('DOMContentLoaded', function() {
             repeatCount,
             instructions,
             label,
+            includeInPdf,
             rowSubsections: currentEditingSubsections
         };
         
@@ -936,8 +954,9 @@ document.addEventListener('DOMContentLoaded', function() {
             div.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div>
-                        <strong>Rows ${subsection.startRow}-${subsection.endRow}</strong> 
-                        <span style="color: #666; font-size: 12px;">(${subsection.endRow - subsection.startRow + 1} rows)</span>
+                        <strong>Rows ${subsection.startRow}-${subsection.endRow}</strong>
+                        ${subsection.label ? `<span style="margin-left:8px; background:#17a2b8; color:white; font-size:11px; padding:1px 6px; border-radius:3px; font-weight:bold;">${subsection.label}</span>` : ''}
+                        <span style="color: #666; font-size: 12px;"> (${subsection.endRow - subsection.startRow + 1} rows)</span>
                         <br><span style="color: #17a2b8; font-size: 11px;">${colSummary}</span>
                         ${subsection.instructions ? `<br><span style="color: #555; font-size: 11px;">${subsection.instructions}</span>` : ''}
                     </div>
@@ -2511,6 +2530,7 @@ if (!modal) return;
                         repeatCount: section.repeatCount,
                         instructions: section.instructions || '',
                         label: section.label || '',
+                        includeInPdf: section.includeInPdf !== false,
                         rowSubsections: mappedSubsections
                     };
                 });
@@ -2727,7 +2747,8 @@ if (!modal) return;
                     end_row: section.endRow - 1,     // Convert to 0-based for backend
                     repeat_count: section.repeatCount,
                     instructions: section.instructions || '',
-                    label: section.label || ''
+                    label: section.label || '',
+                    include_in_pdf: section.includeInPdf !== false ? '1' : '0'
                 };
                 
                 // Add row section data
@@ -3217,6 +3238,32 @@ if (!modal) return;
     }
 }
 });
+</script>
+
+<!-- PDF generation spinner (shared with Download PDF button) -->
+<div id="pdf-spinner-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:12px; padding:32px 48px; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.25);">
+        <div style="width:48px; height:48px; border:5px solid #dee2e6; border-top-color:#3498db; border-radius:50%; animation:pdf-spin 0.8s linear infinite; margin:0 auto 16px;"></div>
+        <div style="font-size:15px; font-weight:600; color:#333;">Generating PDF&hellip;</div>
+        <div style="font-size:12px; color:#888; margin-top:6px;">This may take a few seconds</div>
+    </div>
+</div>
+<style>@keyframes pdf-spin { to { transform: rotate(360deg); } }</style>
+<script>
+(function() {
+    var overlay = document.getElementById('pdf-spinner-overlay');
+    document.querySelectorAll('.pdf-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            overlay.style.display = 'flex';
+            var hide = function() {
+                overlay.style.display = 'none';
+                window.removeEventListener('focus', hide);
+            };
+            window.addEventListener('focus', hide);
+            setTimeout(function() { overlay.style.display = 'none'; window.removeEventListener('focus', hide); }, 60000);
+        });
+    });
+})();
 </script>
 
 {% endblock %}

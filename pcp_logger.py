@@ -17,7 +17,6 @@ import logging
 import logging.handlers
 import os
 import sys
-import traceback
 from datetime import datetime, timezone
 
 # ── Level map ────────────────────────────────────────────────────────────

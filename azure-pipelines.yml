@@ -26,9 +26,99 @@ variables:
 
 stages:
 
-# ── 1. Build & push Docker image ─────────────────────────────────────────
+# ── 1. Test ───────────────────────────────────────────────────────────────
+- stage: Test
+  displayName: 'Run Test Suite'
+  jobs:
+  - job: RunTests
+    displayName: 'pytest + coverage'
+    steps:
+    - checkout: self
+
+    - task: UsePythonVersion@0
+      displayName: 'Use Python 3.12'
+      inputs:
+        versionSpec: '3.12'
+        addToPath: true
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+      displayName: 'Install dependencies'
+
+    - script: |
+        pytest tests/ \
+          --junitxml=$(Build.ArtifactStagingDirectory)/test-results.xml \
+          --cov=. \
+          --cov-report=xml:$(Build.ArtifactStagingDirectory)/coverage.xml \
+          --cov-report=term-missing \
+          -v
+      displayName: 'Run pytest'
+      env:
+        ENVIRONMENT:             'dev'
+        WEB_SECRET:              'test-secret-pipeline'
+        AZURE_KEY_VAULT_URL:     ''
+        USE_MANAGED_IDENTITY:    'false'
+        DB_HOST:                 'localhost'
+        DB_PORT:                 '5432'
+        DB_NAME:                 'testdb'
+        DB_USER:                 'testuser'
+        DB_SSLMODE:              'disable'
+        MAIL_SERVER:             'localhost'
+        MAIL_PORT:               '25'
+        MAIL_USERNAME:           'test@test.com'
+
+    - task: PublishTestResults@2
+      displayName: 'Publish test results'
+      condition: always()
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '$(Build.ArtifactStagingDirectory)/test-results.xml'
+        failTaskOnFailedTests: true
+
+    - task: PublishCodeCoverageResults@2
+      displayName: 'Publish coverage'
+      condition: always()
+      inputs:
+        summaryFileLocation: '$(Build.ArtifactStagingDirectory)/coverage.xml'
+
+# ── 2. Static Analysis & Security ───────────────────────────────────────
+- stage: Lint
+  displayName: 'Static Analysis & Security'
+  dependsOn: Test
+  jobs:
+  - job: Analyse
+    displayName: 'ruff + bandit + pip-audit'
+    steps:
+    - checkout: self
+
+    - task: UsePythonVersion@0
+      displayName: 'Use Python 3.12'
+      inputs:
+        versionSpec: '3.12'
+        addToPath: true
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install ruff bandit pip-audit
+      displayName: 'Install analysis tools'
+
+    - script: ruff check .
+      displayName: 'ruff – lint (pyflakes, pycodestyle, bugbear, isort)'
+
+    - script: |
+        bandit -r app.py config.py database.py set_env.py pcp_logger.py \
+          -ll --format txt
+      displayName: 'bandit – security scan (medium+ severity)'
+
+    - script: pip-audit -r requirements.txt
+      displayName: 'pip-audit – dependency CVE scan'
+
+# ── 3. Build & push Docker image ───────────────────────────────────────
 - stage: Build
   displayName: 'Build & Push Image'
+  dependsOn: Lint
   jobs:
   - job: BuildImage
     displayName: 'ACR remote build + push'
@@ -51,7 +141,7 @@ stages:
             --file $(Build.SourcesDirectory)/Dockerfile \
             $(Build.SourcesDirectory)
 
-# ── 2. Deploy to Staging ──────────────────────────────────────────────────
+# ── 4. Deploy to Staging ──────────────────────────────────────────────────
 - stage: Staging
   displayName: 'Deploy to Staging'
   dependsOn: Build
@@ -75,6 +165,7 @@ stages:
 
           az deployment group create \
             --resource-group $(devResourceGroup) \
+            --name pcp-manager \
             --template-file $(Build.SourcesDirectory)/bicep/pcp-manager.bicep \
             --parameters \
                 location="$(location)" \
@@ -85,21 +176,28 @@ stages:
                 dbHost="$(dbHost)" \
                 registryPassword="$REGISTRY_PASSWORD"
 
-          # Grant Key Vault Secrets User to the container app's managed identity
-          PRINCIPAL_ID=$(az deployment group show \
-            --resource-group $(devResourceGroup) \
+          # Read principal ID directly from the container app (reliable — avoids
+          # deployment-output race where the name may not match expectations)
+          PRINCIPAL_ID=$(az containerapp show \
             --name pcp-manager \
-            --query properties.outputs.managedIdentityPrincipalId.value -o tsv)
+            --resource-group $(devResourceGroup) \
+            --query identity.principalId -o tsv)
 
+          if [ -z "$PRINCIPAL_ID" ]; then
+            echo "ERROR: Could not retrieve managed identity principal ID for pcp-manager"
+            exit 1
+          fi
+
+          echo "Assigning Key Vault Secrets User to principal: $PRINCIPAL_ID"
           KV_ID=$(az keyvault show --name $(keyVaultName) --query id -o tsv)
 
           az role assignment create \
             --assignee-object-id "$PRINCIPAL_ID" \
             --assignee-principal-type ServicePrincipal \
-            --role "4633458b-17de-408a-b874-0445c86b69e0" \
+            --role "Key Vault Secrets User" \
             --scope "$KV_ID" 2>/dev/null || echo "Role assignment already exists, skipping"
 
-# ── 3. Manual approval gate ───────────────────────────────────────────────
+# ── 5. Manual approval gate ───────────────────────────────────────────────
 - stage: ManualApproval
   displayName: 'Manual Approval Before Prod'
   dependsOn: Staging
@@ -114,7 +212,7 @@ stages:
         notifyUsers: ''
         instructions: 'Staging looks good? Approve to deploy pcp-manager to Production.'
 
-# ── 4. Deploy to Prod ─────────────────────────────────────────────────────
+# ── 6. Deploy to Prod ─────────────────────────────────────────────────────
 - stage: Prod
   displayName: 'Deploy to Prod'
   dependsOn: ManualApproval
@@ -138,6 +236,7 @@ stages:
 
           az deployment group create \
             --resource-group $(prodResourceGroup) \
+            --name pcp-manager \
             --template-file $(Build.SourcesDirectory)/bicep/pcp-manager.bicep \
             --parameters \
                 location="$(location)" \
@@ -148,16 +247,23 @@ stages:
                 dbHost="$(dbHost)" \
                 registryPassword="$REGISTRY_PASSWORD"
 
-          # Grant Key Vault Secrets User to the container app's managed identity
-          PRINCIPAL_ID=$(az deployment group show \
-            --resource-group $(prodResourceGroup) \
+          # Read principal ID directly from the container app (reliable — avoids
+          # deployment-output race where the name may not match expectations)
+          PRINCIPAL_ID=$(az containerapp show \
             --name pcp-manager \
-            --query properties.outputs.managedIdentityPrincipalId.value -o tsv)
+            --resource-group $(prodResourceGroup) \
+            --query identity.principalId -o tsv)
 
+          if [ -z "$PRINCIPAL_ID" ]; then
+            echo "ERROR: Could not retrieve managed identity principal ID for pcp-manager"
+            exit 1
+          fi
+
+          echo "Assigning Key Vault Secrets User to principal: $PRINCIPAL_ID"
           KV_ID=$(az keyvault show --name $(keyVaultName) --query id -o tsv)
 
           az role assignment create \
             --assignee-object-id "$PRINCIPAL_ID" \
             --assignee-principal-type ServicePrincipal \
-            --role "4633458b-17de-408a-b874-0445c86b69e0" \
+            --role "Key Vault Secrets User" \
             --scope "$KV_ID" 2>/dev/null || echo "Role assignment already exists, skipping"

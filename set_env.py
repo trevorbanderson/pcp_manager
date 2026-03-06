@@ -6,12 +6,12 @@ Usage in app.py (must be first, before config import):
     import set_env
     set_env.setup()
 """
-import os
 import argparse
-import logging
 import configparser
-from typing import Optional, Dict, Any
+import logging
+import os
 from enum import Enum
+from typing import Any, Dict, Optional
 
 # ── Logging ───────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -44,6 +44,9 @@ class EnvironmentConfig:
         self.secret_prefix        = secret_prefix or ""
         self.use_managed_identity = use_managed_identity
         self.tenant_id            = tenant_id
+
+
+import sys
 
 
 # ── .env file loader ──────────────────────────────────────────────────────
@@ -86,6 +89,14 @@ def set_env_variables(config_dict: Dict[str, str]) -> None:
         if env_key not in os.environ:
             os.environ[env_key] = value
     logger.debug(f"Loaded {len(config_dict)} settings into environment")
+
+    # For local development: default DB_SSLMODE to 'disable' if not set
+    if (
+        os.getenv('ENVIRONMENT', 'dev').lower() == 'dev'
+        and 'DB_SSLMODE' not in os.environ
+    ):
+        os.environ['DB_SSLMODE'] = 'disable'
+        print('[set_env] Defaulted DB_SSLMODE=disable for local development', file=sys.stderr)
 
 
 # ── Azure Key Vault client ────────────────────────────────────────────────
@@ -221,8 +232,10 @@ class AzureKeyVaultConfig:
             env_name,
             f"{self.environment.upper()}_{env_name}",
         ]
+        print(f"[DEBUG _from_env] candidates: {candidates}")
         for name in candidates:
             value = os.getenv(name)
+            print(f"[DEBUG _from_env] {name} -> {value}")
             if value:
                 if use_cache:
                     self._secret_cache[cache_key] = value
@@ -336,7 +349,7 @@ class EnvironmentSetup:
             )
         except Exception as exc:
             print(f"Warning: could not load Key Vault secrets: {exc}")
-            print(f"  Ensure 'az login' is run or managed identity is configured.")
+            print("  Ensure 'az login' is run or managed identity is configured.")
 
         return self.args
 

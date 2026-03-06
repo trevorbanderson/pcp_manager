@@ -23,27 +23,27 @@
         </div>
         <div style="display: flex; align-items: center; gap: 12px;">
             <label style="width: 180px;">Stitches per 4"</label>
-            <input type="number" id="lower_stitches_p4inch" name="lower_stitches_p4inch" value="{{ yarn_weight.lower_stitches_p4inch }}" required style="width: 100px; height: 36px;" placeholder="Lower">
+            <input type="number" id="lower_stitches_p4inch" name="lower_stitches_p4inch" value="{{ yarn_weight.lower_stitches_p4inch or 0 }}" required style="width: 100px; height: 36px;" placeholder="Lower">
             <span style="width: 40px; text-align: right;">to</span>
-            <input type="number" id="upper_stitches_p4inch" name="upper_stitches_p4inch" value="{{ yarn_weight.upper_stitches_p4inch }}" required style="width: 100px; height: 36px;" placeholder="Upper">
+            <input type="number" id="upper_stitches_p4inch" name="upper_stitches_p4inch" value="{{ yarn_weight.upper_stitches_p4inch or 0 }}" required style="width: 100px; height: 36px;" placeholder="Upper">
         </div>
         <div style="display: flex; align-items: center; gap: 12px;">
             <label style="width: 180px;">Needle Size (mm)</label>
-            <input type="number" step="0.01" id="lower_needle_size_mm" name="lower_needle_size_mm" value="{{ yarn_weight.lower_needle_size_mm }}" required style="width: 100px; height: 36px;" placeholder="Lower">
+            <input type="number" step="0.01" id="lower_needle_size_mm" name="lower_needle_size_mm" value="{{ yarn_weight.lower_needle_size_mm or 0 }}" required style="width: 100px; height: 36px;" placeholder="Lower">
             <span style="width: 40px; text-align: right;">to</span>
-            <input type="number" step="0.01" id="upper_needle_size_mm" name="upper_needle_size_mm" value="{{ yarn_weight.upper_needle_size_mm }}" required style="width: 100px; height: 36px;" placeholder="Upper">
+            <input type="number" step="0.01" id="upper_needle_size_mm" name="upper_needle_size_mm" value="{{ yarn_weight.upper_needle_size_mm or 0 }}" required style="width: 100px; height: 36px;" placeholder="Upper">
         </div>
         <div style="display: flex; align-items: center; gap: 12px;">
             <label style="width: 180px;">Needle Size (US)</label>
-            <input type="number" id="lower_needle_size_us" name="lower_needle_size_us" value="{{ yarn_weight.lower_needle_size_us }}" required style="width: 100px; height: 36px;" placeholder="Lower">
+            <input type="number" id="lower_needle_size_us" name="lower_needle_size_us" value="{{ yarn_weight.lower_needle_size_us or 0 }}" required style="width: 100px; height: 36px;" placeholder="Lower">
             <span style="width: 40px; text-align: right;">to</span>
-            <input type="number" id="upper_needle_size_us" name="upper_needle_size_us" value="{{ yarn_weight.upper_needle_size_us }}" required style="width: 100px; height: 36px;" placeholder="Upper">
+            <input type="number" id="upper_needle_size_us" name="upper_needle_size_us" value="{{ yarn_weight.upper_needle_size_us or 0 }}" required style="width: 100px; height: 36px;" placeholder="Upper">
         </div>
         <div style="display: flex; align-items: center; gap: 12px;">
             <label style="width: 180px;">Wraps per Inch</label>
-            <input type="number" id="wraps_per_inch_lower" name="wraps_per_inch_lower" value="{{ yarn_weight.wraps_per_inch_lower }}" required style="width: 100px; height: 36px;" placeholder="Lower">
+            <input type="number" id="wraps_per_inch_lower" name="wraps_per_inch_lower" value="{{ yarn_weight.wraps_per_inch_lower or 0 }}" required style="width: 100px; height: 36px;" placeholder="Lower">
             <span style="width: 40px; text-align: right;">to</span>
-            <input type="number" id="wraps_per_inch_upper" name="wraps_per_inch_upper" value="{{ yarn_weight.wraps_per_inch_upper }}" required style="width: 100px; height: 36px;" placeholder="Upper">
+            <input type="number" id="wraps_per_inch_upper" name="wraps_per_inch_upper" value="{{ yarn_weight.wraps_per_inch_upper or 0 }}" required style="width: 100px; height: 36px;" placeholder="Upper">
         </div>
         <div style="display: flex; align-items: center; gap: 12px;">
             <label for="is_active" style="width: 180px;">Is Active:</label>

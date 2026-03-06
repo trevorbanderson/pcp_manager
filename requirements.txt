@@ -9,4 +9,5 @@ Pillow>=10.0.0
 azure-keyvault-secrets>=4.7.0
 azure-identity>=1.15.0
 tzdata>=2024.1
+reportlab>=4.0.0
 # 2026-03-03 13:09

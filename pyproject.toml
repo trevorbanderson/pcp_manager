@@ -1,0 +1,27 @@
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+exclude = [
+    "__pycache__",
+    ".venv",
+    "*.egg-info",
+]
+
+[tool.ruff.lint]
+# E/W = pycodestyle, F = pyflakes, B = bugbear (common bugs), I = isort
+select = ["E", "F", "W", "B", "I"]
+ignore = [
+    "E402",  # module-level import not at top — set_env.setup() must run before Config
+    "E501",  # line too long — SQL strings and Jinja2 URLs can exceed 120 chars
+    "B904",  # raise from within except — large legacy codebase, enforce separately
+    "B006",  # mutable default argument — not present but pre-emptive
+    "F841",  # local variable assigned but never used — pre-emptive for query vars
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Relax bugbear and unused-import rules inside the test suite
+"tests/*" = ["F811", "F401", "B", "E711"]
+
+[tool.bandit]
+# B101: assert in tests is fine; B311: random is non-crypto intentionally (OTP uses secrets)
+skips = ["B101", "B311"]
