@@ -32,7 +32,7 @@ param keyVaultName string = 'AKV-AgileInnovations-Dev'
 param dbHost string = 'pcpdb.postgres.database.azure.com'
 
 @description('PostgreSQL database name')
-param dbName string = 'PCP'
+param dbName string = 'pcp'
 
 @description('PostgreSQL user')
 param dbUser string = 'pgadmin'
