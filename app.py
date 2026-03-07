@@ -425,12 +425,13 @@ def users_create():
         flash('Admin access required.', 'error')
         return redirect(url_for('index'))
     if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        email    = request.form.get('email', '').strip()
-        password = request.form.get('password', '')
-        is_admin = request.form.get('is_admin') == 'on'
-        if not username or not email or not password:
-            flash('Username, email, and password are required.', 'error')
+        username  = request.form.get('username', '').strip()
+        full_name = request.form.get('full_name', '').strip()
+        email     = request.form.get('email', '').strip()
+        password  = request.form.get('password', '')
+        is_admin  = request.form.get('is_admin') == 'on'
+        if not username or not full_name or not email or not password:
+            flash('Username, full name, email, and password are required.', 'error')
             return render_template('users/create.html')
         if len(password) < 8:
             flash('Password must be at least 8 characters.', 'error')
@@ -439,9 +440,9 @@ def users_create():
             flash('A user with that username or email already exists.', 'error')
             return render_template('users/create.html')
         execute_query(
-            "INSERT INTO users (username, email, password_hash, is_active, is_admin, created_by) "
-            "VALUES (%s, %s, %s, TRUE, %s, %s)",
-            (username, email, generate_password_hash(password), is_admin, current_user.id)
+            "INSERT INTO users (username, full_name, email, password_hash, is_active, is_admin, created_by) "
+            "VALUES (%s, %s, %s, %s, TRUE, %s, %s)",
+            (username, full_name, email, generate_password_hash(password), is_admin, current_user.id)
         )
         flash(f"User '{username}' created.", 'success')
         return redirect(url_for('users_list'))
@@ -459,6 +460,7 @@ def users_edit(id):
         return redirect(url_for('users_list'))
     user_row = rows[0]
     if request.method == 'POST':
+        full_name    = request.form.get('full_name', '').strip()
         email       = request.form.get('email', '').strip()
         is_admin    = request.form.get('is_admin') == 'on'
         is_active   = request.form.get('is_active') == 'on'
@@ -468,13 +470,13 @@ def users_edit(id):
                 flash('New password must be at least 8 characters.', 'error')
                 return render_template('users/edit.html', user=user_row)
             execute_query(
-                "UPDATE users SET email=%s, is_admin=%s, is_active=%s, password_hash=%s WHERE id=%s",
-                (email, is_admin, is_active, generate_password_hash(new_password), id)
+                "UPDATE users SET full_name=%s, email=%s, is_admin=%s, is_active=%s, password_hash=%s WHERE id=%s",
+                (full_name, email, is_admin, is_active, generate_password_hash(new_password), id)
             )
         else:
             execute_query(
-                "UPDATE users SET email=%s, is_admin=%s, is_active=%s WHERE id=%s",
-                (email, is_admin, is_active, id)
+                "UPDATE users SET full_name=%s, email=%s, is_admin=%s, is_active=%s WHERE id=%s",
+                (full_name, email, is_admin, is_active, id)
             )
         flash('User updated.', 'success')
         return redirect(url_for('users_list'))

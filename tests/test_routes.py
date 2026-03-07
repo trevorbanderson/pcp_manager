@@ -288,7 +288,7 @@ class TestUserCreateValidation:
 
     def test_password_too_short(self, auth_client):
         resp = auth_client.post('/users/create', data={
-            'username': 'newuser', 'email': 'new@test.com', 'password': 'short'
+            'username': 'newuser', 'full_name': 'New User', 'email': 'new@test.com', 'password': 'short'
         })
         assert resp.status_code == 200   # re-renders form with error
 
@@ -305,7 +305,7 @@ class TestUserCreateValidation:
 
         monkeypatch.setattr(app_module, 'execute_query', eq)
         resp = auth_client.post('/users/create', data={
-            'username': 'existing', 'email': 'existing@test.com', 'password': 'password123'
+            'username': 'existing', 'full_name': 'Existing User', 'email': 'existing@test.com', 'password': 'password123'
         })
         assert resp.status_code == 200   # re-renders form with "already exists" error
 
