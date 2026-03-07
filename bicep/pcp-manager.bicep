@@ -35,7 +35,7 @@ param dbHost string = 'pcpdb.postgres.database.azure.com'
 param dbName string = 'PCP'
 
 @description('PostgreSQL user')
-param dbUser string = 'postgres'
+param dbUser string = 'pgadmin'
 
 @description('SMTP username for outbound mail')
 param mailUsername string = 'patterncopilot@gmail.com'
