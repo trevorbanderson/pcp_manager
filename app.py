@@ -1053,6 +1053,19 @@ def pattern_schematic(id):
         )
     return "No schematic available", 404
 
+@app.route('/patterns/<int:id>/delete_image', methods=['POST'])
+def pattern_delete_image(id):
+    """NULL out a single image field on a pattern (schematic, picture1-3, gauge_measurement)."""
+    allowed = {'schematic', 'picture1', 'picture2', 'picture3', 'gauge_measurement'}
+    field = request.form.get('field', '').strip()
+    if field not in allowed:
+        flash('Invalid image field.', 'error')
+        return redirect(url_for('patterns_edit', id=id))
+    # nosec B608 — field is validated against a fixed allowlist above
+    execute_query(f'UPDATE pattern SET {field} = NULL WHERE id = %s', (id,), fetch=False)  # nosec B608
+    flash('Image removed.', 'success')
+    return redirect(url_for('patterns_edit', id=id))
+
 @app.route('/patterns/<int:id>/picture/<int:pic>')
 def pattern_picture(id, pic):
     import io
@@ -2906,17 +2919,13 @@ def patterns_edit(id):
 
         # Get current pattern to preserve is_active if not specified in form
         current_pattern = execute_query("SELECT is_active FROM pattern WHERE id = %s", (id,))
-        print(f"DEBUG: Current pattern is_active: {current_pattern}")
-        print(f"DEBUG: Form is_active value: {request.form.get('is_active')}")
 
         if request.form.get('is_active') is not None:
             # If form includes is_active field, use that
             is_active = True if request.form.get('is_active') == 'on' else False
-            print(f"DEBUG: Using form value: {is_active}")
         else:
             # If form doesn't include is_active field, preserve current value
             is_active = current_pattern[0]['is_active'] if current_pattern else True
-            print(f"DEBUG: Preserving current value: {is_active}")
 
         # Build update query - only update files if new ones were uploaded
         update_fields = []
