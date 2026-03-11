@@ -91,6 +91,7 @@
                     <div><strong>Rows:</strong> <span id="rows-calculation">—</span></div>
                     <div><strong>Stitches:</strong> <span id="stitches-calculation">—</span></div>
                 </div>
+                <div id="dmn-notes-row" style="display: none; color: #555; font-size: 10px; font-style: italic; background: #fff8e1; border: 1px solid #ffe082; border-radius: 3px; padding: 4px 6px; margin-bottom: 4px;"><span id="dmn-notes"></span></div>
                 <div style="color: #666; font-size: 10px;"><span id="calculation-status">Select piece, age, size and gender</span></div>
             </div>
         </div>
@@ -1822,13 +1823,9 @@ if (!modal) return;
             const data = await response.json();
             
             if (data.success) {
-                // Extract gauge values from calculation_info
-                // format: "Piece: X, Body Part: Y, Measurement: Z, Pattern Gauge: 20r/16s per 4"
-                const gaugeMatch = data.calculation_info?.match(/Pattern Gauge: ([\d.]+)r\/([\d.]+)s/);
-                const measurementMatch = data.calculation_info?.match(/Measurement: ([\d.]+)/);
-                const gauge = gaugeMatch
-                    ? { rows: gaugeMatch[1], stitches: gaugeMatch[2], measurement: measurementMatch?.[1] || '?' }
-                    : null;
+                const rowsG     = data.rows_per_4inch    ?? null;
+                const stitchesG = data.stitches_per_4inch ?? null;
+                const meas      = data.measurement        ?? null;
 
                 // Populate input summary
                 const calcPiece = document.getElementById('calc-piece');
@@ -1837,14 +1834,29 @@ if (!modal) return;
                 const calcGauge = document.getElementById('calc-gauge');
                 if (calcPiece) calcPiece.textContent = data.calculation_info?.match(/Piece: ([^,]+)/)?.[1] || '—';
                 if (calcBodyPart) calcBodyPart.textContent = data.body_part || '—';
-                if (calcMeasurement) calcMeasurement.textContent = gauge?.measurement ? `${gauge.measurement}"` : '—';
-                if (calcGauge) calcGauge.textContent = gauge ? `${gauge.rows}r / ${gauge.stitches}s` : '—';
+                if (calcMeasurement) calcMeasurement.textContent = meas ? `${meas}"` : '—';
+                if (calcGauge) calcGauge.textContent = (rowsG !== null && stitchesG !== null) ? `${rowsG}r / ${stitchesG}s` : '—';
 
-                if (gauge) {
-                    rowsCalculation.textContent = `(${gauge.stitches} ÷ 4) × (4.2 × 2.75) = ${data.num_rows}`;
-                    stitchesCalculation.textContent = `(${gauge.rows} ÷ 4) × ((${gauge.measurement} ÷ 3.2) × 3.14) = ${data.num_stitches}`;
+                const notesEl = document.getElementById('dmn-notes');
+                const notesRow = document.getElementById('dmn-notes-row');
+                if (notesEl && notesRow) {
+                    const notes = data.dmn_notes || '';
+                    if (notes && notes !== 'NA') {
+                        // Split pipe-delimited notes into separate lines
+                        notesEl.innerHTML = notes.split('|').map(n => n.trim()).filter(Boolean).join('<br>');
+                        notesRow.style.display = 'block';
+                    } else {
+                        notesRow.style.display = 'none';
+                    }
+                }
+
+                if (rowsG !== null && stitchesG !== null) {
+                    rowsCalculation.textContent    = meas !== null
+                        ? `(${rowsG} ÷ 4) × ((${meas} ÷ 3.2) × 3.14) = ${data.num_rows}`
+                        : `(${rowsG} ÷ 4) × ((meas ÷ 3.2) × 3.14) = ${data.num_rows}`;
+                    stitchesCalculation.textContent = `(${stitchesG} ÷ 4) × (4.2 × 2.75) = ${data.num_stitches}`;
                 } else {
-                    rowsCalculation.textContent = `${data.num_rows} rows`;
+                    rowsCalculation.textContent    = `${data.num_rows} rows`;
                     stitchesCalculation.textContent = `${data.num_stitches} stitches`;
                 }
 

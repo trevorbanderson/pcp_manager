@@ -687,7 +687,8 @@ def calculate_chart_dimensions(piece_name, measurement, rows_per_4inch, stitches
             for res in results:
                 result_data = res.get('Result', {}) if isinstance(res, dict) else {}
                 if result_data.get('num_rows') is not None and result_data.get('num_stitches') is not None:
-                    return result_data['num_rows'], result_data['num_stitches'], 'dmn_decision'
+                    notes = result_data.get('notes', '')
+                    return result_data['num_rows'], result_data['num_stitches'], 'dmn_decision', notes
 
         raise ValueError(f"DMN did not return num_rows/num_stitches for piece={piece_name}")
 
@@ -734,7 +735,7 @@ def resolve_chart_dimensions_from_ids(piece_id, age_id, size_id, gender_id, patt
     if not rows_per_4inch or not stitches_per_4inch:
         raise ValueError(f"Pattern gauge missing for id={pattern_id}")
 
-    num_rows, num_stitches, dimension_source = calculate_chart_dimensions(
+    num_rows, num_stitches, dimension_source, _ = calculate_chart_dimensions(
         piece_name, measurement, rows_per_4inch, stitches_per_4inch
     )
 
@@ -1629,7 +1630,7 @@ def api_calculate_chart_dimensions():
             return jsonify({'error': 'Pattern gauge data missing'}), 400
 
         # Step 4: Call DMN decision PieceCoordinates
-        num_rows, num_stitches, dimension_source = calculate_chart_dimensions(
+        num_rows, num_stitches, dimension_source, dmn_notes = calculate_chart_dimensions(
             piece_name, measurement, rows_per_4inch, stitches_per_4inch
         )
         print(
@@ -1643,11 +1644,14 @@ def api_calculate_chart_dimensions():
             'num_stitches': round(num_stitches),
             'body_part': body_part,
             'measurement': measurement,
+            'rows_per_4inch': rows_per_4inch,
+            'stitches_per_4inch': stitches_per_4inch,
             'body_part_source': body_part_source,
             'dimension_source': dimension_source,
             'dmn_file_path': dmn_file_path,
             'dmn_file_modified': dmn_file_modified,
             'dmn_file_size': dmn_file_size,
+            'dmn_notes': dmn_notes or '',
             'calculation_info': f'Piece: {piece_name}, Body Part: {body_part}, Measurement: {measurement}, Pattern Gauge: {rows_per_4inch}r/{stitches_per_4inch}s per 4", DMN Source: {dimension_source}'
         })
 
