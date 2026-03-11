@@ -62,15 +62,15 @@
             <div class="form-group">
                 <label for="gauge_measurement">Gauge Measurement (Image):</label>
                 {% if pattern.gauge_measurement %}
-                    <div style="margin-bottom: 8px;">
+                    <div id="img-wrap-gauge_measurement" style="margin-bottom: 8px;">
                         <img src="{{ url_for('pattern_gauge_measurement', id=pattern.id) }}" alt="Gauge Measurement" style="max-width: 300px; max-height: 300px; display: block; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px;" />
-                        <form method="POST" action="{{ url_for('pattern_delete_image', id=pattern.id) }}" style="display:inline;">
-                            <input type="hidden" name="field" value="gauge_measurement">
-                            <button type="submit" class="btn btn-danger btn-sm" style="margin-top: 5px;">Delete</button>
-                        </form>
+                        <button type="button" class="btn btn-danger btn-sm" style="margin-top: 5px;"
+                            onclick="deleteImage({{ pattern.id }}, 'gauge_measurement')">Delete</button>
                     </div>
                 {% else %}
-                    <input type="file" id="gauge_measurement" name="gauge_measurement" accept="image/*">
+                    <div id="img-wrap-gauge_measurement">
+                        <input type="file" id="gauge_measurement" name="gauge_measurement" accept="image/*">
+                    </div>
                 {% endif %}
             </div>
             <div class="form-group">
@@ -100,15 +100,15 @@
             <div class="form-group">
                 <label for="schematic">Schematic (Image):</label>
                 {% if pattern.schematic %}
-                    <div style="margin-bottom: 8px;">
+                    <div id="img-wrap-schematic" style="margin-bottom: 8px;">
                         <img src="{{ url_for('pattern_schematic', id=pattern.id) }}" alt="Pattern Schematic" style="max-width: 300px; max-height: 300px; display: block; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px;" />
-                        <form method="POST" action="{{ url_for('pattern_delete_image', id=pattern.id) }}" style="display:inline;">
-                            <input type="hidden" name="field" value="schematic">
-                            <button type="submit" class="btn btn-danger btn-sm" style="margin-top: 5px;">Delete</button>
-                        </form>
+                        <button type="button" class="btn btn-danger btn-sm" style="margin-top: 5px;"
+                            onclick="deleteImage({{ pattern.id }}, 'schematic')">Delete</button>
                     </div>
                 {% else %}
-                    <input type="file" id="schematic" name="schematic" accept="image/*">
+                    <div id="img-wrap-schematic">
+                        <input type="file" id="schematic" name="schematic" accept="image/*">
+                    </div>
                 {% endif %}
             </div>
             {% for idx in [1,2,3] %}
@@ -116,15 +116,15 @@
                 <label for="picture{{ idx }}">Picture {{ idx }} (Image):</label>
                 {% set pic = pattern['picture' + idx|string] %}
                 {% if pic %}
-                    <div style="margin-bottom: 8px;">
+                    <div id="img-wrap-picture{{ idx }}" style="margin-bottom: 8px;">
                         <img src="{{ url_for('pattern_picture', id=pattern.id, pic=idx) }}" alt="Pattern Picture {{ idx }}" style="max-width: 300px; max-height: 300px; display: block; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px;" />
-                        <form method="POST" action="{{ url_for('pattern_delete_image', id=pattern.id) }}" style="display:inline;">
-                            <input type="hidden" name="field" value="picture{{ idx }}">
-                            <button type="submit" class="btn btn-danger btn-sm" style="margin-top: 5px;">Delete</button>
-                        </form>
+                        <button type="button" class="btn btn-danger btn-sm" style="margin-top: 5px;"
+                            onclick="deleteImage({{ pattern.id }}, 'picture{{ idx }}')">Delete</button>
                     </div>
                 {% else %}
-                    <input type="file" id="picture{{ idx }}" name="picture{{ idx }}" accept="image/*">
+                    <div id="img-wrap-picture{{ idx }}">
+                        <input type="file" id="picture{{ idx }}" name="picture{{ idx }}" accept="image/*">
+                    </div>
                 {% endif %}
             </div>
             {% endfor %}
@@ -136,4 +136,28 @@
         <a href="{{ url_for('patterns_list') }}" class="btn btn-secondary btn-sm">Cancel</a>
     </div>
 </form>
+<script>
+function deleteImage(patternId, field) {
+    const wrap = document.getElementById('img-wrap-' + field);
+    const btn  = wrap ? wrap.querySelector('button') : null;
+    if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
+    const body = new FormData();
+    body.append('field', field);
+    fetch('/patterns/' + patternId + '/delete_image', { method: 'POST', body: body })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok && wrap) {
+                wrap.innerHTML = '<input type="file" id="' + field + '" name="' + field + '" accept="image/*">';
+                wrap.style.marginBottom = '';
+            } else {
+                alert('Could not delete image.');
+                if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
+            }
+        })
+        .catch(() => {
+            alert('Network error — could not delete image.');
+            if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
+        });
+}
+</script>
 {% endblock %}

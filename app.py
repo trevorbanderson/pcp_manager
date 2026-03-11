@@ -1056,15 +1056,14 @@ def pattern_schematic(id):
 @app.route('/patterns/<int:id>/delete_image', methods=['POST'])
 def pattern_delete_image(id):
     """NULL out a single image field on a pattern (schematic, picture1-3, gauge_measurement)."""
+    from flask import jsonify
     allowed = {'schematic', 'picture1', 'picture2', 'picture3', 'gauge_measurement'}
     field = request.form.get('field', '').strip()
     if field not in allowed:
-        flash('Invalid image field.', 'error')
-        return redirect(url_for('patterns_edit', id=id))
+        return jsonify(ok=False, error='Invalid image field.'), 400
     # nosec B608 — field is validated against a fixed allowlist above
     execute_query(f'UPDATE pattern SET {field} = NULL WHERE id = %s', (id,), fetch=False)  # nosec B608
-    flash('Image removed.', 'success')
-    return redirect(url_for('patterns_edit', id=id))
+    return jsonify(ok=True)
 
 @app.route('/patterns/<int:id>/picture/<int:pic>')
 def pattern_picture(id, pic):
