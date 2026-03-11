@@ -2444,6 +2444,26 @@ if (!modal) return;
             updateDimensions();
         });
     }
+
+    // Allow user to manually override DMN-calculated dimensions (create mode only)
+    if (!editMode) {
+        function applyManualGridSize() {
+            const r = parseInt(numRowsInput.value) || 0;
+            const c = parseInt(numColsInput.value) || 0;
+            if (r > 0 && c > 0) {
+                gridRows = r;
+                gridCols = c;
+                const gridContainer = document.getElementById('chart-grid-container');
+                const gridMessage   = document.getElementById('grid-message');
+                if (gridContainer) { gridContainer.style.display = 'inline-block'; }
+                if (gridMessage)   { gridMessage.style.display = 'none'; }
+                renderGrid(r, c);
+                if (submitBtn) submitBtn.disabled = false;
+            }
+        }
+        numRowsInput.addEventListener('change', applyManualGridSize);
+        numColsInput.addEventListener('change', applyManualGridSize);
+    }
     
     // Initialize with disabled inputs and no grid (unless in edit mode)
     if (!editMode) {

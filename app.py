@@ -1671,10 +1671,15 @@ def charts_create():
             return redirect(request.url)
 
         dim = resolve_chart_dimensions_from_ids(piece_id, age_id, size_id, gender_id, int(pattern_id))
-        calc_rows = dim['num_rows']
-        calc_cols = dim['num_stitches']
+        # Use form-submitted values so the user can override DMN defaults.
+        # Fall back to DMN only when the form values are absent or zero.
+        form_rows = int(request.form.get('num_rows', 0))
+        form_cols = int(request.form.get('num_columns', 0))
+        calc_rows = form_rows if form_rows > 0 else dim['num_rows']
+        calc_cols = form_cols if form_cols > 0 else dim['num_stitches']
         print(
-            f"[DMN] charts_create using DMN dimensions rows={calc_rows}, cols={calc_cols}, "
+            f"[DMN] charts_create rows={calc_rows} (form={form_rows}, dmn={dim['num_rows']}), "
+            f"cols={calc_cols} (form={form_cols}, dmn={dim['num_stitches']}), "
             f"piece={dim['piece_name']}, source={dim['dimension_source']}"
         )
 
