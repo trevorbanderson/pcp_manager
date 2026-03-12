@@ -171,10 +171,14 @@ stages:
           echo "Installing psql..."
           sudo apt-get install -y --no-install-recommends postgresql-client > /dev/null
 
-          # Determine agent outbound IP and open firewall rule
+          # Determine agent outbound IP, enable public access, open firewall rule
           AGENT_IP=$(curl -s https://api.ipify.org)
           RULE_NAME="ado-agent-$(Build.BuildId)"
-          echo "Agent IP: $AGENT_IP — opening firewall rule $RULE_NAME..."
+          echo "Agent IP: $AGENT_IP — enabling public access on $(dbServerName)..."
+          az postgres flexible-server update \
+            --resource-group $(devResourceGroup) --name $(dbServerName) \
+            --public-network-access Enabled
+          echo "Opening firewall rule $RULE_NAME..."
           az postgres flexible-server firewall-rule create \
             --resource-group $(devResourceGroup) --name $(dbServerName) \
             --rule-name "$RULE_NAME" \
@@ -188,11 +192,15 @@ stages:
           )
           MIGRATION_EXIT=$?
 
-          # Remove firewall rule regardless of migration result
+          # Remove firewall rule and disable public access regardless of migration result
           echo "Removing firewall rule $RULE_NAME..."
           az postgres flexible-server firewall-rule delete \
             --resource-group $(devResourceGroup) --name $(dbServerName) \
             --rule-name "$RULE_NAME" --yes || true
+          echo "Disabling public access on $(dbServerName)..."
+          az postgres flexible-server update \
+            --resource-group $(devResourceGroup) --name $(dbServerName) \
+            --public-network-access Disabled || true
 
           exit $MIGRATION_EXIT
 
@@ -284,10 +292,14 @@ stages:
           echo "Installing psql..."
           sudo apt-get install -y --no-install-recommends postgresql-client > /dev/null
 
-          # Determine agent outbound IP and open firewall rule
+          # Determine agent outbound IP, enable public access, open firewall rule
           AGENT_IP=$(curl -s https://api.ipify.org)
           RULE_NAME="ado-agent-$(Build.BuildId)"
-          echo "Agent IP: $AGENT_IP — opening firewall rule $RULE_NAME..."
+          echo "Agent IP: $AGENT_IP — enabling public access on $(dbServerName)..."
+          az postgres flexible-server update \
+            --resource-group $(prodResourceGroup) --name $(dbServerName) \
+            --public-network-access Enabled
+          echo "Opening firewall rule $RULE_NAME..."
           az postgres flexible-server firewall-rule create \
             --resource-group $(prodResourceGroup) --name $(dbServerName) \
             --rule-name "$RULE_NAME" \
@@ -301,11 +313,15 @@ stages:
           )
           MIGRATION_EXIT=$?
 
-          # Remove firewall rule regardless of migration result
+          # Remove firewall rule and disable public access regardless of migration result
           echo "Removing firewall rule $RULE_NAME..."
           az postgres flexible-server firewall-rule delete \
             --resource-group $(prodResourceGroup) --name $(dbServerName) \
             --rule-name "$RULE_NAME" --yes || true
+          echo "Disabling public access on $(dbServerName)..."
+          az postgres flexible-server update \
+            --resource-group $(prodResourceGroup) --name $(dbServerName) \
+            --public-network-access Disabled || true
 
           exit $MIGRATION_EXIT
 
