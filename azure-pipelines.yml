@@ -196,7 +196,6 @@ stages:
 
           az postgres flexible-server execute \
             --name $(dbServerName) \
-            --resource-group $(devResourceGroup) \
             --admin-user $(dbUser) \
             --admin-password "$DB_PASSWORD" \
             --file-path "$COMBINED_SQL"
@@ -317,7 +316,6 @@ stages:
 
           az postgres flexible-server execute \
             --name $(dbServerName) \
-            --resource-group $(prodResourceGroup) \
             --admin-user $(dbUser) \
             --admin-password "$DB_PASSWORD" \
             --file-path "$COMBINED_SQL"
