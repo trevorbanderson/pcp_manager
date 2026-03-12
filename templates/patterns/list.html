@@ -67,4 +67,14 @@
         {% endif %}
     </tbody>
 </table>
+
+{# Force a reload when this page is restored from the browser's back-forward cache
+   so that a pattern deleted in this session doesn't reappear on Back navigation. #}
+<script>
+window.addEventListener('pageshow', function (event) {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
+</script>
 {% endblock %}

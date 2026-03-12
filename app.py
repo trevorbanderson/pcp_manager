@@ -2853,7 +2853,9 @@ def patterns_list():
                              total_patterns=total_count,
                              active_count=len(patterns or []))
         resp = make_response(response)
-        resp.headers['Cache-Control'] = 'no-store'
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
         return resp
     except Exception as e:
         print(f"Error in patterns_list: {e}")
