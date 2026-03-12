@@ -764,8 +764,31 @@ def favicon():
 # Home page shows patterns list
 @app.route('/')
 def index():
-    patterns = execute_query("SELECT * FROM pattern ORDER BY id")
-    return render_template('patterns/list.html', patterns=patterns)
+    all_patterns = execute_query("SELECT COUNT(*) as count FROM pattern")
+    total_count = all_patterns[0]['count'] if all_patterns else 0
+    patterns = execute_query("""
+        SELECT p.id, p.name, p.description, p.category_id, p.level_of_difficulty_id,
+               p.yarn_weight_id, p.is_active, p.created_at, p.created_by,
+               p.schematic IS NOT NULL as has_schematic,
+               COALESCE(pc.category, 'N/A') as category,
+               COALESCE(pc.sub_category, 'N/A') as sub_category,
+               COALESCE(lod.name, 'N/A') AS difficulty_name,
+               COALESCE(yw.weight_name, 'N/A') AS yarn_weight_name
+        FROM pattern p
+        LEFT JOIN pattern_category pc ON p.category_id = pc.id
+        LEFT JOIN level_of_difficulty lod ON p.level_of_difficulty_id = lod.id
+        LEFT JOIN yarn_weight yw ON p.yarn_weight_id = yw.weight_id
+        WHERE p.is_active = TRUE
+        ORDER BY p.id
+    """)
+    resp = make_response(render_template('patterns/list.html',
+                                         patterns=patterns or [],
+                                         total_patterns=total_count,
+                                         active_count=len(patterns or [])))
+    resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 # Piece Routes
 @app.route('/pieces')
