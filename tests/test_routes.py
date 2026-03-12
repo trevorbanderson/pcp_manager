@@ -344,6 +344,49 @@ class TestDeleteRoutes:
     def test_pattern_yarn_weights_delete(self, auth_client):
         assert auth_client.post('/pattern_yarn_weights/1/delete').status_code == 302
 
+    def test_patterns_delete(self, auth_client, monkeypatch):
+        import app as app_module
+
+        def eq(sql, params=None, fetch=True):
+            low = sql.lower()
+            if (
+                'from users where id' in low
+                or 'from users where username' in low
+                or 'full_name from users' in low
+            ):
+                return [FAKE_USER_ROW]
+            if 'select id, name from pattern where id' in low:
+                return [{'id': 1, 'name': 'Alice Cowl'}]
+            return []
+
+        monkeypatch.setattr(app_module, 'execute_query', eq)
+        assert auth_client.post('/patterns/1/delete').status_code == 302
+
+    def test_patterns_delete_db_error_redirects(self, auth_client, monkeypatch):
+        import app as app_module
+
+        def eq(sql, params=None, fetch=True):
+            low = sql.lower()
+            if (
+                'from users where id' in low
+                or 'from users where username' in low
+                or 'full_name from users' in low
+            ):
+                return [FAKE_USER_ROW]
+            if 'select id, name from pattern where id' in low:
+                return [{'id': 1, 'name': 'Alice Cowl'}]
+            if 'update pattern set is_active = false where id' in low:
+                raise RuntimeError('db failed')
+            return []
+
+        monkeypatch.setattr(app_module, 'execute_query', eq)
+
+        resp = auth_client.post('/patterns/1/delete')
+        assert resp.status_code == 302
+        with auth_client.session_transaction() as sess:
+            flashes = sess.get('_flashes', [])
+        assert any('unable to delete pattern' in msg.lower() for _, msg in flashes)
+
     def test_users_delete_self_rejected(self, auth_client):
         # user id=1 cannot delete themselves
         resp = auth_client.post('/users/1/delete')

@@ -23,6 +23,8 @@ variables:
   devResourceGroup:      'Dev'
   prodResourceGroup:     'Prod'
   dbHost:                'pcpdb.postgres.database.azure.com'
+  dbUser:                'pgadmin'
+  dbName:                'pcp'
 
 stages:
 
@@ -152,6 +154,27 @@ stages:
     - checkout: self
 
     - task: AzureCLI@2
+      displayName: 'Run DB migrations (staging)'
+      inputs:
+        azureSubscription: '$(azureSubscriptionDev)'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -e
+          echo "Fetching DB password from Key Vault..."
+          export PGPASSWORD=$(az keyvault secret show \
+            --vault-name $(keyVaultName) \
+            --name DB-PASSWORD \
+            --query value -o tsv)
+
+          echo "Installing psql..."
+          sudo apt-get install -y --no-install-recommends postgresql-client > /dev/null
+
+          chmod +x $(Build.SourcesDirectory)/migrations/run_migrations.sh
+          $(Build.SourcesDirectory)/migrations/run_migrations.sh \
+            $(dbHost) $(dbUser) $(dbName)
+
+    - task: AzureCLI@2
       displayName: 'az deployment group create (staging)'
       inputs:
         azureSubscription: '$(azureSubscriptionDev)'
@@ -221,6 +244,27 @@ stages:
     displayName: 'Bicep deploy → Prod resource group'
     steps:
     - checkout: self
+
+    - task: AzureCLI@2
+      displayName: 'Run DB migrations (prod)'
+      inputs:
+        azureSubscription: '$(azureSubscriptionProd)'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -e
+          echo "Fetching DB password from Key Vault..."
+          export PGPASSWORD=$(az keyvault secret show \
+            --vault-name $(keyVaultName) \
+            --name DB-PASSWORD \
+            --query value -o tsv)
+
+          echo "Installing psql..."
+          sudo apt-get install -y --no-install-recommends postgresql-client > /dev/null
+
+          chmod +x $(Build.SourcesDirectory)/migrations/run_migrations.sh
+          $(Build.SourcesDirectory)/migrations/run_migrations.sh \
+            $(dbHost) $(dbUser) $(dbName)
 
     - task: AzureCLI@2
       displayName: 'az deployment group create (prod)'

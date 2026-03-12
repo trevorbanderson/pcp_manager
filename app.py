@@ -605,11 +605,16 @@ def level_of_difficulty_edit(id):
         flash('Level of Difficulty not found.', 'danger')
         return redirect(url_for('level_of_difficulty_list'))
     if request.method == 'POST':
+        symbol_file = request.files.get('symbol')
+        if symbol_file and symbol_file.filename:
+            symbol_data = symbol_file.read()
+        else:
+            symbol_data = level['symbol']  # keep existing image if no new file uploaded
         query = 'UPDATE level_of_difficulty SET name = %s, seq = %s, symbol = %s, created_at = %s WHERE id = %s'
         execute_query(query, (
             request.form['name'],
             int(request.form.get('seq', 0)),
-            request.form.get('symbol'),
+            symbol_data,
             _now(),
             id
         ), fetch=False)
@@ -976,10 +981,12 @@ def level_of_difficulty_create():
             INSERT INTO level_of_difficulty (id, name, seq, symbol, is_active, created_by, created_at)
             VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM level_of_difficulty), %s, %s, %s, TRUE, %s, %s)
         """
+        symbol_file = request.files.get('symbol')
+        symbol_data = symbol_file.read() if symbol_file and symbol_file.filename else None
         execute_query(query, (
             request.form['name'],
             int(request.form.get('seq', 0)),
-            request.form.get('symbol'),
+            symbol_data,
             current_user.username,
             _now()
         ), fetch=False)
@@ -1028,14 +1035,29 @@ def b64encode_filter(data):
 
 
 # Pattern Category Routes
-@app.route('/pattern_categories')
-
 # Add routes to serve pattern pictures (must be at top level)
-    # ...existing code...
 
 @app.route('/patterns/<int:id>/delete', methods=['POST'])
 def patterns_delete(id):
-    execute_query("UPDATE pattern SET is_active = FALSE WHERE id = %s", (id,), fetch=False)
+    pattern = execute_query("SELECT id, name FROM pattern WHERE id = %s", (id,))
+    if not pattern:
+        flash('Pattern not found.', 'warning')
+        return redirect(url_for('patterns_list'))
+
+    try:
+        execute_query("UPDATE pattern SET is_active = FALSE WHERE id = %s", (id,), fetch=False)
+    except Exception:
+        _log.error(
+            "Failed to soft-delete pattern",
+            extra={
+                "pattern_id": id,
+                "user": getattr(current_user, 'username', 'unknown'),
+            },
+            exc_info=True,
+        )
+        flash('Unable to delete pattern right now.', 'error')
+        return redirect(url_for('patterns_list'))
+
     flash('Pattern deleted successfully!', 'success')
     return redirect(url_for('patterns_list'))
 
@@ -2855,8 +2877,8 @@ def patterns_create():
 
         is_active = True if request.form.get('is_active') == 'on' else False
         query = """
-            INSERT INTO pattern (id, name, description, category_id, level_of_difficulty_id, yarn_weight_id, gauge_stitches_p4inch, gauge_rows_p4inch, schematic, picture1, picture2, picture3, additional_details, gauge_measurement, needle_type, is_active, created_by)
-            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pattern), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO pattern (id, name, description, category_id, level_of_difficulty_id, yarn_weight_id, gauge_stitches_p4inch, gauge_rows_p4inch, schematic, picture1, picture2, picture3, additional_details, gauge_measurement, is_active, created_by)
+            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pattern), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         execute_query(query, (
             request.form['name'],
@@ -2872,11 +2894,10 @@ def patterns_create():
             picture3_data,
             request.form.get('additional_details', ''),
             gauge_measurement_data,
-            request.form.get('needle_type', ''),
             is_active,
             current_user.username
         ), fetch=False)
-        # Save selected features to pattern_element
+        # Save selected features and notions to pattern_element
         pattern_id = execute_query("SELECT MAX(id) as id FROM pattern")[0]['id']
         feature_ids = request.form.getlist('features')
         for feature_id in feature_ids:
@@ -2885,14 +2906,46 @@ def patterns_create():
                 (pattern_id, feature_id, current_user.username),
                 fetch=False
             )
+        notion_ids = request.form.getlist('notions')
+        for notion_id in notion_ids:
+            execute_query(
+                "INSERT INTO pattern_element (id, pattern_id, element_id, created_by) VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pattern_element), %s, %s, %s)",
+                (pattern_id, notion_id, current_user.username),
+                fetch=False
+            )
+        casting_on_id = request.form.get('casting_on')
+        if casting_on_id:
+            execute_query(
+                "INSERT INTO pattern_element (id, pattern_id, element_id, created_by) VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pattern_element), %s, %s, %s)",
+                (pattern_id, casting_on_id, current_user.username),
+                fetch=False
+            )
+        casting_off_id = request.form.get('casting_off')
+        if casting_off_id:
+            execute_query(
+                "INSERT INTO pattern_element (id, pattern_id, element_id, created_by) VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pattern_element), %s, %s, %s)",
+                (pattern_id, casting_off_id, current_user.username),
+                fetch=False
+            )
+        finishing_ids = request.form.getlist('finishing')
+        for finishing_id in finishing_ids:
+            execute_query(
+                "INSERT INTO pattern_element (id, pattern_id, element_id, created_by) VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pattern_element), %s, %s, %s)",
+                (pattern_id, finishing_id, current_user.username),
+                fetch=False
+            )
         flash('Pattern created successfully!', 'success')
         return redirect(url_for('patterns_list'))
 
     categories = execute_query("SELECT * FROM pattern_category WHERE is_active = TRUE ORDER BY category")
     features = execute_query("SELECT id, description FROM element WHERE type = 'feature' AND is_active = TRUE ORDER BY description")
+    notions = execute_query("SELECT id, description FROM element WHERE type = 'notion' AND is_active = TRUE ORDER BY description")
+    casting_on_options = execute_query("SELECT id, description FROM element WHERE type = 'casting-on' AND is_active = TRUE ORDER BY description")
+    casting_off_options = execute_query("SELECT id, description FROM element WHERE type = 'casting-off' AND is_active = TRUE ORDER BY description")
+    finishing_options = execute_query("SELECT id, description FROM element WHERE type = 'finishing' AND is_active = TRUE ORDER BY description")
     levels = execute_query("SELECT id, name FROM level_of_difficulty WHERE is_active = TRUE ORDER BY seq, id")
     yarn_weights = execute_query("SELECT * FROM yarn_weight WHERE is_active = TRUE ORDER BY weight_id")
-    return render_template('patterns/create.html', categories=categories, features=features, levels=levels, yarn_weights=yarn_weights)
+    return render_template('patterns/create.html', categories=categories, features=features, notions=notions, casting_on_options=casting_on_options, casting_off_options=casting_off_options, finishing_options=finishing_options, levels=levels, yarn_weights=yarn_weights)
 
 @app.route('/patterns/<int:id>/edit', methods=['GET', 'POST'])
 def patterns_edit(id):
@@ -2941,7 +2994,7 @@ def patterns_edit(id):
 
         # Always update text fields
         update_fields.extend(['name = %s', 'description = %s', 'category_id = %s', 'level_of_difficulty_id = %s', 'yarn_weight_id = %s',
-                             'gauge_stitches_p4inch = %s', 'gauge_rows_p4inch = %s', 'additional_details = %s', 'needle_type = %s', 'is_active = %s',
+                             'gauge_stitches_p4inch = %s', 'gauge_rows_p4inch = %s', 'additional_details = %s', 'is_active = %s',
                              'created_by = %s', 'created_at = %s'])
         update_values.extend([
             request.form['name'],
@@ -2952,7 +3005,6 @@ def patterns_edit(id):
             float(request.form['gauge_stitches_p4inch']) if request.form.get('gauge_stitches_p4inch') else None,
             float(request.form['gauge_rows_p4inch']) if request.form.get('gauge_rows_p4inch') else None,
             request.form.get('additional_details', ''),
-            request.form.get('needle_type', ''),
             is_active,
             current_user.username,
             _now()
@@ -2981,8 +3033,8 @@ def patterns_edit(id):
         query = f"UPDATE pattern SET {', '.join(update_fields)} WHERE id = %s"  # nosec B608
         execute_query(query, update_values, fetch=False)
 
-        # Update pattern features
-        # First, delete existing features
+        # Update pattern features and notions
+        # First, delete existing elements
         execute_query("DELETE FROM pattern_element WHERE pattern_id = %s", (id,), fetch=False)
 
         # Then add selected features
@@ -2991,6 +3043,38 @@ def patterns_edit(id):
             execute_query(
                 "INSERT INTO pattern_element (id, pattern_id, element_id, created_by) VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pattern_element), %s, %s, %s)",
                 (id, feature_id, current_user.username),
+                fetch=False
+            )
+        # Then add selected notions
+        notion_ids = request.form.getlist('notions')
+        for notion_id in notion_ids:
+            execute_query(
+                "INSERT INTO pattern_element (id, pattern_id, element_id, created_by) VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pattern_element), %s, %s, %s)",
+                (id, notion_id, current_user.username),
+                fetch=False
+            )
+        # Then add selected casting on (single value)
+        casting_on_id = request.form.get('casting_on')
+        if casting_on_id:
+            execute_query(
+                "INSERT INTO pattern_element (id, pattern_id, element_id, created_by) VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pattern_element), %s, %s, %s)",
+                (id, casting_on_id, current_user.username),
+                fetch=False
+            )
+        # Then add selected casting off (single value)
+        casting_off_id = request.form.get('casting_off')
+        if casting_off_id:
+            execute_query(
+                "INSERT INTO pattern_element (id, pattern_id, element_id, created_by) VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pattern_element), %s, %s, %s)",
+                (id, casting_off_id, current_user.username),
+                fetch=False
+            )
+        # Then add selected finishing
+        finishing_ids = request.form.getlist('finishing')
+        for finishing_id in finishing_ids:
+            execute_query(
+                "INSERT INTO pattern_element (id, pattern_id, element_id, created_by) VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pattern_element), %s, %s, %s)",
+                (id, finishing_id, current_user.username),
                 fetch=False
             )
 
@@ -3006,15 +3090,41 @@ def patterns_edit(id):
     pattern = pattern[0]
     categories = execute_query("SELECT * FROM pattern_category WHERE is_active = TRUE ORDER BY category")
     features = execute_query("SELECT id, description FROM element WHERE type = 'feature' AND is_active = TRUE ORDER BY description")
+    notions = execute_query("SELECT id, description FROM element WHERE type = 'notion' AND is_active = TRUE ORDER BY description")
+    casting_on_options = execute_query("SELECT id, description FROM element WHERE type = 'casting-on' AND is_active = TRUE ORDER BY description")
+    casting_off_options = execute_query("SELECT id, description FROM element WHERE type = 'casting-off' AND is_active = TRUE ORDER BY description")
+    finishing_options = execute_query("SELECT id, description FROM element WHERE type = 'finishing' AND is_active = TRUE ORDER BY description")
     levels = execute_query("SELECT id, name FROM level_of_difficulty WHERE is_active = TRUE ORDER BY seq, id")
     yarn_weights = execute_query("SELECT * FROM yarn_weight WHERE is_active = TRUE ORDER BY weight_id")
 
     # Get current pattern features
-    selected_features = execute_query("SELECT element_id FROM pattern_element WHERE pattern_id = %s", (id,))
+    selected_features = execute_query("SELECT element_id FROM pattern_element WHERE pattern_id = %s AND element_id IN (SELECT id FROM element WHERE type = 'feature')", (id,))
     selected_feature_ids = [f['element_id'] for f in selected_features] if selected_features else []
 
+    # Get current pattern notions
+    selected_notions = execute_query("SELECT element_id FROM pattern_element WHERE pattern_id = %s AND element_id IN (SELECT id FROM element WHERE type = 'notion')", (id,))
+    selected_notion_ids = [n['element_id'] for n in selected_notions] if selected_notions else []
+
+    # Get current casting on (single value)
+    selected_casting_on_row = execute_query("SELECT element_id FROM pattern_element WHERE pattern_id = %s AND element_id IN (SELECT id FROM element WHERE type = 'casting-on') LIMIT 1", (id,))
+    selected_casting_on_id = selected_casting_on_row[0]['element_id'] if selected_casting_on_row else None
+
+    # Get current casting off (single value)
+    selected_casting_off_row = execute_query("SELECT element_id FROM pattern_element WHERE pattern_id = %s AND element_id IN (SELECT id FROM element WHERE type = 'casting-off') LIMIT 1", (id,))
+    selected_casting_off_id = selected_casting_off_row[0]['element_id'] if selected_casting_off_row else None
+
+    # Get current finishing
+    selected_finishing = execute_query("SELECT element_id FROM pattern_element WHERE pattern_id = %s AND element_id IN (SELECT id FROM element WHERE type = 'finishing')", (id,))
+    selected_finishing_ids = [f['element_id'] for f in selected_finishing] if selected_finishing else []
+
     return render_template('patterns/edit.html', pattern=pattern, categories=categories,
-                         features=features, levels=levels, yarn_weights=yarn_weights, selected_features=selected_feature_ids)
+                         features=features, notions=notions, casting_on_options=casting_on_options,
+                         casting_off_options=casting_off_options, finishing_options=finishing_options,
+                         levels=levels, yarn_weights=yarn_weights,
+                         selected_features=selected_feature_ids, selected_notions=selected_notion_ids,
+                         selected_casting_on_id=selected_casting_on_id,
+                         selected_casting_off_id=selected_casting_off_id,
+                         selected_finishing_ids=selected_finishing_ids)
 
 
 if __name__ == '__main__':

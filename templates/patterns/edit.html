@@ -74,19 +74,46 @@
                 {% endif %}
             </div>
             <div class="form-group">
-                <label for="needle_type">Needle Type:</label>
-                <select id="needle_type" name="needle_type" required>
-                    <option value="">Select needle type...</option>
-                    <option value="Straight" {% if pattern.needle_type == 'Straight' %}selected{% endif %}>Straight</option>
-                    <option value="Circular" {% if pattern.needle_type == 'Circular' %}selected{% endif %}>Circular</option>
-                    <option value="Double-Pointed" {% if pattern.needle_type == 'Double-Pointed' %}selected{% endif %}>Double-Pointed</option>
+                <label for="notions">Notions:</label>
+                <select id="notions" name="notions" multiple size="6" style="width:100%">
+                    {% for notion in notions %}
+                        <option value="{{ notion.id }}" {% if notion.id in selected_notions %}selected{% endif %}>{{ notion.description }}</option>
+                    {% endfor %}
                 </select>
+                <small>Hold Ctrl (Windows) or Command (Mac) to select multiple notions.</small>
+            </div>
+            <div class="form-group">
+                <label for="casting_on">Casting On:</label>
+                <select id="casting_on" name="casting_on" style="width:100%">
+                    <option value="">Select casting on method...</option>
+                    {% for option in casting_on_options %}
+                        <option value="{{ option.id }}" {% if option.id == selected_casting_on_id %}selected{% endif %}>{{ option.description }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="casting_off">Casting Off:</label>
+                <select id="casting_off" name="casting_off" style="width:100%">
+                    <option value="">Select casting off method...</option>
+                    {% for option in casting_off_options %}
+                        <option value="{{ option.id }}" {% if option.id == selected_casting_off_id %}selected{% endif %}>{{ option.description }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="finishing">Finishing:</label>
+                <select id="finishing" name="finishing" multiple size="6" style="width:100%">
+                    {% for option in finishing_options %}
+                        <option value="{{ option.id }}" {% if option.id in selected_finishing_ids %}selected{% endif %}>{{ option.description }}</option>
+                    {% endfor %}
+                </select>
+                <small>Hold Ctrl (Windows) or Command (Mac) to select multiple.</small>
             </div>
             <div class="form-group">
                 <label for="features">Features:</label>
                 <select id="features" name="features" multiple size="6" style="width:100%">
                     {% for feature in features %}
-                        <option value="{{ feature.id }}" {% if feature.id|string in selected_feature_ids %}selected{% endif %}>{{ feature.description }}</option>
+                        <option value="{{ feature.id }}" {% if feature.id in selected_features %}selected{% endif %}>{{ feature.description }}</option>
                     {% endfor %}
                 </select>
                 <small>Hold Ctrl (Windows) or Command (Mac) to select multiple features.</small>

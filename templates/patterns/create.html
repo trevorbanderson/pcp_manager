@@ -68,13 +68,40 @@
                 <input type="file" id="gauge_measurement" name="gauge_measurement" accept="image/*">
             </div>
             <div class="form-group">
-                <label for="needle_type">Needle Type:</label>
-                <select id="needle_type" name="needle_type" required>
-                    <option value="">Select needle type...</option>
-                    <option value="Straight">Straight</option>
-                    <option value="Circular">Circular</option>
-                    <option value="Double-Pointed">Double-Pointed</option>
+                <label for="notions">Notions:</label>
+                <select id="notions" name="notions" multiple size="6" style="width:100%">
+                    {% for notion in notions %}
+                        <option value="{{ notion.id }}">{{ notion.description }}</option>
+                    {% endfor %}
                 </select>
+                <small>Hold Ctrl (Windows) or Command (Mac) to select multiple notions.</small>
+            </div>
+            <div class="form-group">
+                <label for="casting_on">Casting On:</label>
+                <select id="casting_on" name="casting_on" style="width:100%">
+                    <option value="">Select casting on method...</option>
+                    {% for option in casting_on_options %}
+                        <option value="{{ option.id }}">{{ option.description }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="casting_off">Casting Off:</label>
+                <select id="casting_off" name="casting_off" style="width:100%">
+                    <option value="">Select casting off method...</option>
+                    {% for option in casting_off_options %}
+                        <option value="{{ option.id }}">{{ option.description }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="finishing">Finishing:</label>
+                <select id="finishing" name="finishing" multiple size="6" style="width:100%">
+                    {% for option in finishing_options %}
+                        <option value="{{ option.id }}">{{ option.description }}</option>
+                    {% endfor %}
+                </select>
+                <small>Hold Ctrl (Windows) or Command (Mac) to select multiple.</small>
             </div>
             <div class="form-group">
                 <label for="additional_details">Additional Details:</label>

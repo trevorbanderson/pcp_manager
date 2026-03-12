@@ -3297,5 +3297,167 @@ if (!modal) return;
     });
 })();
 </script>
+<!-- Abbreviation Autocomplete for Instructions fields -->
+<script>
+(function() {
+    // Build abbreviation list from server-side elements where type == 'instruction'
+    const ABBR_LIST = [
+        {% for e in elements if e.type == 'instruction' and e.abbrieviation %}
+        { abbr: {{ e.abbrieviation | tojson }}, desc: {{ e.description | tojson }} },
+        {% endfor %}
+    ];
 
+    if (!ABBR_LIST.length) return; // Nothing to suggest
+
+    // ── Dropdown element ──────────────────────────────────────────────────
+    const dropdown = document.createElement('div');
+    dropdown.id = 'abbr-autocomplete-dropdown';
+    Object.assign(dropdown.style, {
+        position: 'fixed',
+        background: '#fff',
+        border: '1px solid #0078d4',
+        borderRadius: '4px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        zIndex: '99999',
+        maxHeight: '200px',
+        overflowY: 'auto',
+        display: 'none',
+        minWidth: '220px',
+        fontSize: '13px',
+    });
+    document.body.appendChild(dropdown);
+
+    let activeTextarea = null;
+    let activeIndex = -1;
+
+    function hideDropdown() {
+        dropdown.style.display = 'none';
+        activeIndex = -1;
+    }
+
+    function getItems() {
+        return dropdown.querySelectorAll('.abbr-item');
+    }
+
+    function highlightItem(idx) {
+        getItems().forEach((el, i) => {
+            el.style.background = i === idx ? '#0078d4' : '';
+            el.style.color = i === idx ? '#fff' : '';
+        });
+    }
+
+    function getCurrentWord(textarea) {
+        const val = textarea.value;
+        const pos = textarea.selectionStart;
+        const before = val.slice(0, pos);
+        const match = before.match(/(\S+)$/);
+        return match ? match[1] : '';
+    }
+
+    function replaceCurrentWord(textarea, replacement) {
+        const val = textarea.value;
+        const pos = textarea.selectionStart;
+        const before = val.slice(0, pos);
+        const after = val.slice(pos);
+        const match = before.match(/(\S+)$/);
+        if (!match) {
+            textarea.value = before + replacement + after;
+            const newPos = before.length + replacement.length;
+            textarea.setSelectionRange(newPos, newPos);
+        } else {
+            const newBefore = before.slice(0, before.length - match[1].length) + replacement;
+            textarea.value = newBefore + after;
+            textarea.setSelectionRange(newBefore.length, newBefore.length);
+        }
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function showDropdown(textarea, matches) {
+        if (!matches.length) { hideDropdown(); return; }
+
+        dropdown.innerHTML = '';
+        activeIndex = -1;
+
+        matches.forEach((item, i) => {
+            const div = document.createElement('div');
+            div.className = 'abbr-item';
+            div.innerHTML =
+                '<span style="font-weight:bold;min-width:60px;display:inline-block;padding:0 4px;">' +
+                escapeHtml(item.abbr) + '</span>' +
+                '<span style="color:#555;font-size:12px;">' + escapeHtml(item.desc) + '</span>';
+            Object.assign(div.style, {
+                padding: '5px 10px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                borderBottom: '1px solid #f0f0f0',
+            });
+            div.addEventListener('mousedown', function(e) {
+                e.preventDefault(); // keep textarea focus
+                replaceCurrentWord(textarea, item.abbr);
+                hideDropdown();
+            });
+            dropdown.appendChild(div);
+        });
+
+        // Position below the textarea
+        const rect = textarea.getBoundingClientRect();
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.top  = (rect.bottom + 2) + 'px';
+        dropdown.style.display = 'block';
+    }
+
+    function escapeHtml(str) {
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── Event delegation — catch any textarea whose id/name contains "instructions" ─
+    function isInstructionsField(el) {
+        if (el.tagName !== 'TEXTAREA') return false;
+        const id   = (el.id   || '').toLowerCase();
+        const name = (el.name || '').toLowerCase();
+        return id.includes('instruction') || name.includes('instruction');
+    }
+
+    document.addEventListener('input', function(e) {
+        if (!isInstructionsField(e.target)) return;
+        activeTextarea = e.target;
+        const word = getCurrentWord(e.target);
+        if (word.length < 1) { hideDropdown(); return; }
+        const lc = word.toLowerCase();
+        const matches = ABBR_LIST.filter(a => a.abbr.toLowerCase().startsWith(lc));
+        showDropdown(e.target, matches);
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (dropdown.style.display === 'none') return;
+        const items = getItems();
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIndex = Math.min(activeIndex + 1, items.length - 1);
+            highlightItem(activeIndex);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIndex = Math.max(activeIndex - 1, 0);
+            highlightItem(activeIndex);
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            if (activeIndex >= 0 && items[activeIndex]) {
+                e.preventDefault();
+                items[activeIndex].dispatchEvent(new MouseEvent('mousedown'));
+            } else {
+                hideDropdown();
+            }
+        } else if (e.key === 'Escape') {
+            hideDropdown();
+        }
+    });
+
+    document.addEventListener('focusout', function(e) {
+        if (!isInstructionsField(e.target)) return;
+        setTimeout(hideDropdown, 150); // delay so mousedown on item fires first
+    });
+
+    document.addEventListener('scroll', hideDropdown, true);
+    window.addEventListener('resize', hideDropdown);
+})();
+</script>
 {% endblock %}
