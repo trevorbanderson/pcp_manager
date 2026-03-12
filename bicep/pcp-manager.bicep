@@ -37,6 +37,9 @@ param dbName string = 'pcp'
 @description('PostgreSQL user')
 param dbUser string = 'pgadmin'
 
+@description('Build/version identifier (injected by pipeline as Build.BuildId)')
+param appVersion string = 'local'
+
 @description('SMTP username for outbound mail')
 param mailUsername string = 'patterncopilot@gmail.com'
 
@@ -102,6 +105,7 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'DB_NAME',              value: dbName }
             { name: 'DB_USER',              value: dbUser }
             { name: 'DB_SSLMODE',           value: 'require' }
+            { name: 'APP_VERSION',          value: appVersion }
             { name: 'LOG_DIR',              value: logDir }
             { name: 'MAIL_SERVER',          value: 'smtp.gmail.com' }
             { name: 'MAIL_PORT',            value: '587' }

@@ -96,7 +96,7 @@ def fmt_dt(value, fmt=None):
 
 @app.context_processor
 def inject_helpers():
-    """Make get_full_name(username) available in all templates."""
+    """Make get_full_name(username) and app env info available in all templates."""
     _cache = {}
     def get_full_name(username):
         if not username:
@@ -105,7 +105,11 @@ def inject_helpers():
             rows = execute_query("SELECT full_name FROM users WHERE username = %s", (username,))
             _cache[username] = (rows[0].get('full_name') or username) if rows else username
         return _cache[username]
-    return dict(get_full_name=get_full_name)
+    return dict(
+        get_full_name=get_full_name,
+        app_env=os.getenv('ENVIRONMENT', 'dev'),
+        app_version=os.getenv('APP_VERSION', 'local'),
+    )
 
 # ---------------------------------------------------------------------------
 # Flask-Login setup

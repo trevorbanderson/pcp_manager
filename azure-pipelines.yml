@@ -220,6 +220,7 @@ stages:
                 envName="$(envName)" \
                 environment="staging" \
                 imageTag="$(Build.BuildId)" \
+                appVersion="$(Build.BuildId)" \
                 keyVaultName="$(keyVaultName)" \
                 dbHost="$(dbHost)" \
                 registryPassword="$REGISTRY_PASSWORD"
@@ -336,6 +337,7 @@ stages:
                 envName="$(envName)" \
                 environment="prod" \
                 imageTag="$(Build.BuildId)" \
+                appVersion="$(Build.BuildId)" \
                 keyVaultName="$(keyVaultName)" \
                 dbHost="$(dbHost)" \
                 registryPassword="$REGISTRY_PASSWORD"

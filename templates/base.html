@@ -79,6 +79,9 @@
             </div>
             {% if current_user.is_authenticated %}
             <div class="navbar-user">
+                {% if app_env != 'prod' %}
+                <span style="background: {% if app_env == 'staging' %}#e67e22{% else %}#27ae60{% endif %}; color: white; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; letter-spacing: 0.5px; margin-right: 6px; text-transform: uppercase;">{{ app_env }} &middot; {{ app_version }}</span>
+                {% endif %}
                 {% if not current_user.totp_secret %}
                 <a href="{{ url_for('mfa_setup_totp') }}" class="navbar-totp-warning" title="Set up authenticator app for stronger MFA">&#128274; Set up TOTP</a>
                 {% endif %}

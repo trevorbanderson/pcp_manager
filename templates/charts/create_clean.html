@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-header" style="margin-bottom: 15px;">
+<div class="page-header" style="margin-bottom: 15px; display: flex; align-items: center; gap: 12px;">
     <h2 style="margin: 0;">{% if edit_mode %}Edit Chart{% else %}Create Chart{% endif %}{% if pattern_name %} - {{ pattern_name }}{% endif %}</h2>
+    {% if pattern_id %}
+    <a href="{% if pattern_id %}/charts?pattern_id={{ pattern_id }}{% else %}/charts{% endif %}" class="btn btn-secondary" style="height: 34px; display: flex; align-items: center;">Return to Chart List</a>
+    {% endif %}
 </div>
 
 <form method="POST" style="max-width: 1000px;" id="chartForm">
