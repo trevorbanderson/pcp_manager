@@ -3,7 +3,7 @@ FROM python:3.12-slim AS base
 
 # libpq-dev is required by psycopg[binary]
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libpq-dev gcc \
+    && apt-get install -y --no-install-recommends libpq-dev gcc postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

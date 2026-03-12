@@ -162,46 +162,42 @@ stages:
         scriptLocation: inlineScript
         inlineScript: |
           set -e
-          echo "Fetching DB password from Key Vault..."
-          DB_PASSWORD=$(az keyvault secret show \
-            --vault-name $(keyVaultName) \
-            --name DB-PASSWORD \
-            --query value -o tsv)
+          JOB_NAME="pcp-db-migrate"
+          RG="$(devResourceGroup)"
+          IMAGE="$(containerRegistry)/$(imageName):$(Build.BuildId)"
 
-          MIGRATIONS_DIR="$(Build.SourcesDirectory)/migrations"
-          COMBINED_SQL=$(mktemp --suffix=.sql)
+          echo "Updating migration job image to $IMAGE..."
+          az containerapp job update \
+            --name "$JOB_NAME" \
+            --resource-group "$RG" \
+            --image "$IMAGE"
 
-          # Tracking table
-          echo "CREATE TABLE IF NOT EXISTS schema_migrations (filename VARCHAR(255) PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW());" > "$COMBINED_SQL"
+          echo "Starting migration job execution..."
+          EXECUTION=$(az containerapp job start \
+            --name "$JOB_NAME" \
+            --resource-group "$RG" \
+            --query name -o tsv)
+          echo "Execution name: $EXECUTION"
 
-          # Wrap each migration in an idempotency guard
-          for sql_file in $(ls "$MIGRATIONS_DIR"/*.sql 2>/dev/null | sort); do
-            fname=$(basename "$sql_file")
-            {
-              echo ""
-              echo "DO \$_mg_\$ BEGIN"
-              echo "IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE filename='$fname') THEN"
-              cat "$sql_file"
-              echo ""
-              echo "INSERT INTO schema_migrations(filename) VALUES ('$fname');"
-              echo "RAISE NOTICE 'Applied: %', '$fname';"
-              echo "ELSE RAISE NOTICE 'Skipped (already applied): %', '$fname';"
-              echo "END IF; END \$_mg_\$;"
-            } >> "$COMBINED_SQL"
+          echo "Polling for completion..."
+          DEADLINE=$(( $(date +%s) + 600 ))
+          while true; do
+            STATUS=$(az containerapp job execution show \
+              --name "$JOB_NAME" \
+              --resource-group "$RG" \
+              --job-execution-name "$EXECUTION" \
+              --query properties.status -o tsv 2>/dev/null || echo "Running")
+            echo "  [$(date +%H:%M:%S)] $STATUS"
+            if [[ "$STATUS" == "Succeeded" ]]; then
+              echo "Migrations succeeded."; break
+            elif [[ "$STATUS" == "Failed" || "$STATUS" == "Stopped" || "$STATUS" == "Degraded" ]]; then
+              echo "Migration job $STATUS."; exit 1
+            fi
+            if (( $(date +%s) > DEADLINE )); then
+              echo "Timed out (10 min) waiting for migration job."; exit 1
+            fi
+            sleep 15
           done
-
-          echo "=== Migration SQL ==="
-          cat "$COMBINED_SQL"
-          echo "=== Running migrations ==="
-
-          az postgres flexible-server execute \
-            --name $(dbServerName) \
-            --admin-user $(dbUser) \
-            --admin-password "$DB_PASSWORD" \
-            --file-path "$COMBINED_SQL"
-
-          rm -f "$COMBINED_SQL"
-          echo "=== Migrations complete ==="
 
     - task: AzureCLI@2
       displayName: 'az deployment group create (staging)'
@@ -282,46 +278,42 @@ stages:
         scriptLocation: inlineScript
         inlineScript: |
           set -e
-          echo "Fetching DB password from Key Vault..."
-          DB_PASSWORD=$(az keyvault secret show \
-            --vault-name $(keyVaultName) \
-            --name DB-PASSWORD \
-            --query value -o tsv)
+          JOB_NAME="pcp-db-migrate"
+          RG="$(prodResourceGroup)"
+          IMAGE="$(containerRegistry)/$(imageName):$(Build.BuildId)"
 
-          MIGRATIONS_DIR="$(Build.SourcesDirectory)/migrations"
-          COMBINED_SQL=$(mktemp --suffix=.sql)
+          echo "Updating migration job image to $IMAGE..."
+          az containerapp job update \
+            --name "$JOB_NAME" \
+            --resource-group "$RG" \
+            --image "$IMAGE"
 
-          # Tracking table
-          echo "CREATE TABLE IF NOT EXISTS schema_migrations (filename VARCHAR(255) PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW());" > "$COMBINED_SQL"
+          echo "Starting migration job execution..."
+          EXECUTION=$(az containerapp job start \
+            --name "$JOB_NAME" \
+            --resource-group "$RG" \
+            --query name -o tsv)
+          echo "Execution name: $EXECUTION"
 
-          # Wrap each migration in an idempotency guard
-          for sql_file in $(ls "$MIGRATIONS_DIR"/*.sql 2>/dev/null | sort); do
-            fname=$(basename "$sql_file")
-            {
-              echo ""
-              echo "DO \$_mg_\$ BEGIN"
-              echo "IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE filename='$fname') THEN"
-              cat "$sql_file"
-              echo ""
-              echo "INSERT INTO schema_migrations(filename) VALUES ('$fname');"
-              echo "RAISE NOTICE 'Applied: %', '$fname';"
-              echo "ELSE RAISE NOTICE 'Skipped (already applied): %', '$fname';"
-              echo "END IF; END \$_mg_\$;"
-            } >> "$COMBINED_SQL"
+          echo "Polling for completion..."
+          DEADLINE=$(( $(date +%s) + 600 ))
+          while true; do
+            STATUS=$(az containerapp job execution show \
+              --name "$JOB_NAME" \
+              --resource-group "$RG" \
+              --job-execution-name "$EXECUTION" \
+              --query properties.status -o tsv 2>/dev/null || echo "Running")
+            echo "  [$(date +%H:%M:%S)] $STATUS"
+            if [[ "$STATUS" == "Succeeded" ]]; then
+              echo "Migrations succeeded."; break
+            elif [[ "$STATUS" == "Failed" || "$STATUS" == "Stopped" || "$STATUS" == "Degraded" ]]; then
+              echo "Migration job $STATUS."; exit 1
+            fi
+            if (( $(date +%s) > DEADLINE )); then
+              echo "Timed out (10 min) waiting for migration job."; exit 1
+            fi
+            sleep 15
           done
-
-          echo "=== Migration SQL ==="
-          cat "$COMBINED_SQL"
-          echo "=== Running migrations ==="
-
-          az postgres flexible-server execute \
-            --name $(dbServerName) \
-            --admin-user $(dbUser) \
-            --admin-password "$DB_PASSWORD" \
-            --file-path "$COMBINED_SQL"
-
-          rm -f "$COMBINED_SQL"
-          echo "=== Migrations complete ==="
 
     - task: AzureCLI@2
       displayName: 'az deployment group create (prod)'
