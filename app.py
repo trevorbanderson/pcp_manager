@@ -50,7 +50,7 @@ _log.info(
     }
 )
 
-from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, flash, jsonify, make_response, redirect, render_template, request, session, url_for
 from flask_login import LoginManager, UserMixin, current_user, login_user, logout_user
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -1049,7 +1049,10 @@ def patterns_delete(id):
         return redirect(url_for('patterns_list'))
 
     try:
-        execute_query("UPDATE pattern SET is_active = FALSE WHERE id = %s", (id,), fetch=False)
+        updated = execute_query(
+            "UPDATE pattern SET is_active = FALSE WHERE id = %s AND is_active = TRUE RETURNING id",
+            (id,)
+        )
     except Exception:
         _log.error(
             "Failed to soft-delete pattern",
@@ -1060,6 +1063,12 @@ def patterns_delete(id):
             exc_info=True,
         )
         flash('Unable to delete pattern right now.', 'error')
+        return redirect(url_for('patterns_list'))
+
+    if not updated:
+        _log.error("patterns_delete: RETURNING id came back empty — row not updated",
+                   extra={"pattern_id": id})
+        flash('Pattern could not be deleted (was it already deleted?).', 'warning')
         return redirect(url_for('patterns_list'))
 
     flash('Pattern deleted successfully!', 'success')
@@ -2839,10 +2848,13 @@ def patterns_list():
             ORDER BY p.id
         """)
 
-        return render_template('patterns/list.html',
+        response = render_template('patterns/list.html',
                              patterns=patterns or [],
                              total_patterns=total_count,
                              active_count=len(patterns or []))
+        resp = make_response(response)
+        resp.headers['Cache-Control'] = 'no-store'
+        return resp
     except Exception as e:
         print(f"Error in patterns_list: {e}")
         import traceback

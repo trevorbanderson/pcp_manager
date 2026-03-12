@@ -18,7 +18,8 @@ def get_db_connection():
         user=Config.DB_USER,
         password=Config.get_db_password(),
         sslmode=sslmode,
-        row_factory=dict_row
+        row_factory=dict_row,
+        autocommit=False,
     )
     return conn
 
