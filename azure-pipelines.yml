@@ -23,6 +23,7 @@ variables:
   devResourceGroup:      'Dev'
   prodResourceGroup:     'Prod'
   dbHost:                'pcpdb.postgres.database.azure.com'
+  dbServerName:          'pcpdb'
   dbUser:                'pgadmin'
   dbName:                'pcp'
 
@@ -170,9 +171,37 @@ stages:
           echo "Installing psql..."
           sudo apt-get install -y --no-install-recommends postgresql-client > /dev/null
 
-          chmod +x $(Build.SourcesDirectory)/migrations/run_migrations.sh
-          $(Build.SourcesDirectory)/migrations/run_migrations.sh \
-            $(dbHost) $(dbUser) $(dbName)
+          # Determine agent outbound IP and open firewall rule
+          AGENT_IP=$(curl -s https://api.ipify.org)
+          RULE_NAME="ado-agent-$(Build.BuildId)"
+          echo "Agent IP: $AGENT_IP — opening firewall rule $RULE_NAME..."
+          az postgres flexible-server firewall-rule create \
+            --resource-group $(devResourceGroup) --name $(dbServerName) \
+            --rule-name "$RULE_NAME" \
+            --start-ip-address "$AGENT_IP" --end-ip-address "$AGENT_IP" 2>/dev/null || \
+          az postgres server firewall-rule create \
+            --resource-group $(devResourceGroup) --server-name $(dbServerName) \
+            --name "$RULE_NAME" \
+            --start-ip-address "$AGENT_IP" --end-ip-address "$AGENT_IP"
+
+          # Run migrations (in subshell so trap always fires)
+          (
+            chmod +x $(Build.SourcesDirectory)/migrations/run_migrations.sh
+            $(Build.SourcesDirectory)/migrations/run_migrations.sh \
+              $(dbHost) $(dbUser) $(dbName)
+          )
+          MIGRATION_EXIT=$?
+
+          # Remove firewall rule regardless of migration result
+          echo "Removing firewall rule $RULE_NAME..."
+          az postgres flexible-server firewall-rule delete \
+            --resource-group $(devResourceGroup) --name $(dbServerName) \
+            --rule-name "$RULE_NAME" --yes 2>/dev/null || \
+          az postgres server firewall-rule delete \
+            --resource-group $(devResourceGroup) --server-name $(dbServerName) \
+            --name "$RULE_NAME" --yes 2>/dev/null || true
+
+          exit $MIGRATION_EXIT
 
     - task: AzureCLI@2
       displayName: 'az deployment group create (staging)'
@@ -262,9 +291,37 @@ stages:
           echo "Installing psql..."
           sudo apt-get install -y --no-install-recommends postgresql-client > /dev/null
 
-          chmod +x $(Build.SourcesDirectory)/migrations/run_migrations.sh
-          $(Build.SourcesDirectory)/migrations/run_migrations.sh \
-            $(dbHost) $(dbUser) $(dbName)
+          # Determine agent outbound IP and open firewall rule
+          AGENT_IP=$(curl -s https://api.ipify.org)
+          RULE_NAME="ado-agent-$(Build.BuildId)"
+          echo "Agent IP: $AGENT_IP — opening firewall rule $RULE_NAME..."
+          az postgres flexible-server firewall-rule create \
+            --resource-group $(prodResourceGroup) --name $(dbServerName) \
+            --rule-name "$RULE_NAME" \
+            --start-ip-address "$AGENT_IP" --end-ip-address "$AGENT_IP" 2>/dev/null || \
+          az postgres server firewall-rule create \
+            --resource-group $(prodResourceGroup) --server-name $(dbServerName) \
+            --name "$RULE_NAME" \
+            --start-ip-address "$AGENT_IP" --end-ip-address "$AGENT_IP"
+
+          # Run migrations (in subshell so cleanup always fires)
+          (
+            chmod +x $(Build.SourcesDirectory)/migrations/run_migrations.sh
+            $(Build.SourcesDirectory)/migrations/run_migrations.sh \
+              $(dbHost) $(dbUser) $(dbName)
+          )
+          MIGRATION_EXIT=$?
+
+          # Remove firewall rule regardless of migration result
+          echo "Removing firewall rule $RULE_NAME..."
+          az postgres flexible-server firewall-rule delete \
+            --resource-group $(prodResourceGroup) --name $(dbServerName) \
+            --rule-name "$RULE_NAME" --yes 2>/dev/null || \
+          az postgres server firewall-rule delete \
+            --resource-group $(prodResourceGroup) --server-name $(dbServerName) \
+            --name "$RULE_NAME" --yes 2>/dev/null || true
+
+          exit $MIGRATION_EXIT
 
     - task: AzureCLI@2
       displayName: 'az deployment group create (prod)'
