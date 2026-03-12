@@ -178,10 +178,6 @@ stages:
           az postgres flexible-server firewall-rule create \
             --resource-group $(devResourceGroup) --name $(dbServerName) \
             --rule-name "$RULE_NAME" \
-            --start-ip-address "$AGENT_IP" --end-ip-address "$AGENT_IP" 2>/dev/null || \
-          az postgres server firewall-rule create \
-            --resource-group $(devResourceGroup) --server-name $(dbServerName) \
-            --name "$RULE_NAME" \
             --start-ip-address "$AGENT_IP" --end-ip-address "$AGENT_IP"
 
           # Run migrations (in subshell so trap always fires)
@@ -196,10 +192,7 @@ stages:
           echo "Removing firewall rule $RULE_NAME..."
           az postgres flexible-server firewall-rule delete \
             --resource-group $(devResourceGroup) --name $(dbServerName) \
-            --rule-name "$RULE_NAME" --yes 2>/dev/null || \
-          az postgres server firewall-rule delete \
-            --resource-group $(devResourceGroup) --server-name $(dbServerName) \
-            --name "$RULE_NAME" --yes 2>/dev/null || true
+            --rule-name "$RULE_NAME" --yes || true
 
           exit $MIGRATION_EXIT
 
@@ -298,10 +291,6 @@ stages:
           az postgres flexible-server firewall-rule create \
             --resource-group $(prodResourceGroup) --name $(dbServerName) \
             --rule-name "$RULE_NAME" \
-            --start-ip-address "$AGENT_IP" --end-ip-address "$AGENT_IP" 2>/dev/null || \
-          az postgres server firewall-rule create \
-            --resource-group $(prodResourceGroup) --server-name $(dbServerName) \
-            --name "$RULE_NAME" \
             --start-ip-address "$AGENT_IP" --end-ip-address "$AGENT_IP"
 
           # Run migrations (in subshell so cleanup always fires)
@@ -316,10 +305,7 @@ stages:
           echo "Removing firewall rule $RULE_NAME..."
           az postgres flexible-server firewall-rule delete \
             --resource-group $(prodResourceGroup) --name $(dbServerName) \
-            --rule-name "$RULE_NAME" --yes 2>/dev/null || \
-          az postgres server firewall-rule delete \
-            --resource-group $(prodResourceGroup) --server-name $(dbServerName) \
-            --name "$RULE_NAME" --yes 2>/dev/null || true
+            --rule-name "$RULE_NAME" --yes || true
 
           exit $MIGRATION_EXIT
 
