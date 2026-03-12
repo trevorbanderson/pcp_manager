@@ -163,46 +163,46 @@ stages:
         inlineScript: |
           set -e
           echo "Fetching DB password from Key Vault..."
-          export PGPASSWORD=$(az keyvault secret show \
+          DB_PASSWORD=$(az keyvault secret show \
             --vault-name $(keyVaultName) \
             --name DB-PASSWORD \
             --query value -o tsv)
 
-          echo "Installing psql..."
-          sudo apt-get install -y --no-install-recommends postgresql-client > /dev/null
+          MIGRATIONS_DIR="$(Build.SourcesDirectory)/migrations"
+          COMBINED_SQL=$(mktemp --suffix=.sql)
 
-          # Determine agent outbound IP, enable public access, open firewall rule
-          AGENT_IP=$(curl -s https://api.ipify.org)
-          RULE_NAME="ado-agent-$(Build.BuildId)"
-          echo "Agent IP: $AGENT_IP — enabling public access on $(dbServerName)..."
-          az postgres flexible-server update \
-            --resource-group $(devResourceGroup) --name $(dbServerName) \
-            --public-network-access Enabled
-          echo "Opening firewall rule $RULE_NAME..."
-          az postgres flexible-server firewall-rule create \
-            --resource-group $(devResourceGroup) --name $(dbServerName) \
-            --rule-name "$RULE_NAME" \
-            --start-ip-address "$AGENT_IP" --end-ip-address "$AGENT_IP"
+          # Tracking table
+          echo "CREATE TABLE IF NOT EXISTS schema_migrations (filename VARCHAR(255) PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW());" > "$COMBINED_SQL"
 
-          # Run migrations (in subshell so trap always fires)
-          (
-            chmod +x $(Build.SourcesDirectory)/migrations/run_migrations.sh
-            $(Build.SourcesDirectory)/migrations/run_migrations.sh \
-              $(dbHost) $(dbUser) $(dbName)
-          )
-          MIGRATION_EXIT=$?
+          # Wrap each migration in an idempotency guard
+          for sql_file in $(ls "$MIGRATIONS_DIR"/*.sql 2>/dev/null | sort); do
+            fname=$(basename "$sql_file")
+            {
+              echo ""
+              echo "DO \$_mg_\$ BEGIN"
+              echo "IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE filename='$fname') THEN"
+              cat "$sql_file"
+              echo ""
+              echo "INSERT INTO schema_migrations(filename) VALUES ('$fname');"
+              echo "RAISE NOTICE 'Applied: %', '$fname';"
+              echo "ELSE RAISE NOTICE 'Skipped (already applied): %', '$fname';"
+              echo "END IF; END \$_mg_\$;"
+            } >> "$COMBINED_SQL"
+          done
 
-          # Remove firewall rule and disable public access regardless of migration result
-          echo "Removing firewall rule $RULE_NAME..."
-          az postgres flexible-server firewall-rule delete \
-            --resource-group $(devResourceGroup) --name $(dbServerName) \
-            --rule-name "$RULE_NAME" --yes || true
-          echo "Disabling public access on $(dbServerName)..."
-          az postgres flexible-server update \
-            --resource-group $(devResourceGroup) --name $(dbServerName) \
-            --public-network-access Disabled || true
+          echo "=== Migration SQL ==="
+          cat "$COMBINED_SQL"
+          echo "=== Running migrations ==="
 
-          exit $MIGRATION_EXIT
+          az postgres flexible-server execute \
+            --name $(dbServerName) \
+            --resource-group $(devResourceGroup) \
+            --admin-user $(dbUser) \
+            --admin-password "$DB_PASSWORD" \
+            --file-path "$COMBINED_SQL"
+
+          rm -f "$COMBINED_SQL"
+          echo "=== Migrations complete ==="
 
     - task: AzureCLI@2
       displayName: 'az deployment group create (staging)'
@@ -284,46 +284,46 @@ stages:
         inlineScript: |
           set -e
           echo "Fetching DB password from Key Vault..."
-          export PGPASSWORD=$(az keyvault secret show \
+          DB_PASSWORD=$(az keyvault secret show \
             --vault-name $(keyVaultName) \
             --name DB-PASSWORD \
             --query value -o tsv)
 
-          echo "Installing psql..."
-          sudo apt-get install -y --no-install-recommends postgresql-client > /dev/null
+          MIGRATIONS_DIR="$(Build.SourcesDirectory)/migrations"
+          COMBINED_SQL=$(mktemp --suffix=.sql)
 
-          # Determine agent outbound IP, enable public access, open firewall rule
-          AGENT_IP=$(curl -s https://api.ipify.org)
-          RULE_NAME="ado-agent-$(Build.BuildId)"
-          echo "Agent IP: $AGENT_IP — enabling public access on $(dbServerName)..."
-          az postgres flexible-server update \
-            --resource-group $(prodResourceGroup) --name $(dbServerName) \
-            --public-network-access Enabled
-          echo "Opening firewall rule $RULE_NAME..."
-          az postgres flexible-server firewall-rule create \
-            --resource-group $(prodResourceGroup) --name $(dbServerName) \
-            --rule-name "$RULE_NAME" \
-            --start-ip-address "$AGENT_IP" --end-ip-address "$AGENT_IP"
+          # Tracking table
+          echo "CREATE TABLE IF NOT EXISTS schema_migrations (filename VARCHAR(255) PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW());" > "$COMBINED_SQL"
 
-          # Run migrations (in subshell so cleanup always fires)
-          (
-            chmod +x $(Build.SourcesDirectory)/migrations/run_migrations.sh
-            $(Build.SourcesDirectory)/migrations/run_migrations.sh \
-              $(dbHost) $(dbUser) $(dbName)
-          )
-          MIGRATION_EXIT=$?
+          # Wrap each migration in an idempotency guard
+          for sql_file in $(ls "$MIGRATIONS_DIR"/*.sql 2>/dev/null | sort); do
+            fname=$(basename "$sql_file")
+            {
+              echo ""
+              echo "DO \$_mg_\$ BEGIN"
+              echo "IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE filename='$fname') THEN"
+              cat "$sql_file"
+              echo ""
+              echo "INSERT INTO schema_migrations(filename) VALUES ('$fname');"
+              echo "RAISE NOTICE 'Applied: %', '$fname';"
+              echo "ELSE RAISE NOTICE 'Skipped (already applied): %', '$fname';"
+              echo "END IF; END \$_mg_\$;"
+            } >> "$COMBINED_SQL"
+          done
 
-          # Remove firewall rule and disable public access regardless of migration result
-          echo "Removing firewall rule $RULE_NAME..."
-          az postgres flexible-server firewall-rule delete \
-            --resource-group $(prodResourceGroup) --name $(dbServerName) \
-            --rule-name "$RULE_NAME" --yes || true
-          echo "Disabling public access on $(dbServerName)..."
-          az postgres flexible-server update \
-            --resource-group $(prodResourceGroup) --name $(dbServerName) \
-            --public-network-access Disabled || true
+          echo "=== Migration SQL ==="
+          cat "$COMBINED_SQL"
+          echo "=== Running migrations ==="
 
-          exit $MIGRATION_EXIT
+          az postgres flexible-server execute \
+            --name $(dbServerName) \
+            --resource-group $(prodResourceGroup) \
+            --admin-user $(dbUser) \
+            --admin-password "$DB_PASSWORD" \
+            --file-path "$COMBINED_SQL"
+
+          rm -f "$COMBINED_SQL"
+          echo "=== Migrations complete ==="
 
     - task: AzureCLI@2
       displayName: 'az deployment group create (prod)'
