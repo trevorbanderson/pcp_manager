@@ -989,18 +989,40 @@ def step_delete(id):
 
 @app.route('/step', methods=['GET'], endpoint='step_list')
 def step_list():
-    steps = execute_query(
-        """
+    selected_phase_id = request.args.get('phase_id', type=int)
+    selected_group_id = request.args.get('group_id', type=int)
+    phases = _phase_options()
+    step_groups = _step_group_options()
+
+    query = """
         SELECT s.*, sg.phase_id, sg.seq AS group_seq, sg.description AS group_desc,
                p.seq AS phase_seq, p.description AS phase_desc
         FROM step s
         JOIN step_group sg ON s.step_group_id = sg.id
         JOIN phase p ON sg.phase_id = p.id
         WHERE s.is_active = TRUE AND sg.is_active = TRUE AND p.is_active = TRUE
-        ORDER BY p.seq, sg.seq, s.seq, s.id
-        """
+    """
+    params = []
+    if selected_phase_id:
+        query += " AND p.id = %s"
+        params.append(selected_phase_id)
+    if selected_group_id:
+        query += " AND sg.id = %s"
+        params.append(selected_group_id)
+    query += " ORDER BY p.seq, sg.seq, s.seq, s.id"
+
+    steps = execute_query(
+        query,
+        tuple(params) if params else None,
     )
-    return render_template('step/list.html', steps=steps or [])
+    return render_template(
+        'step/list.html',
+        steps=steps or [],
+        phases=phases,
+        step_groups=step_groups,
+        selected_phase_id=selected_phase_id,
+        selected_group_id=selected_group_id,
+    )
 
 
 @app.route('/step/create', methods=['GET', 'POST'], endpoint='step_create')

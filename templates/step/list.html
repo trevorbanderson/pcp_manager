@@ -5,18 +5,39 @@
     <h2>Steps</h2>
     <a href="{{ url_for('step_create') }}" class="btn btn-primary">Add Step</a>
 </div>
+
+<form method="GET" id="step-filter-form" style="display: flex; gap: 12px; align-items: end; margin-bottom: 14px; flex-wrap: wrap;">
+    <div>
+        <label for="phase_id" style="display: block; margin-bottom: 3px;">Phase:</label>
+        <select id="phase_id" name="phase_id" style="min-width: 220px; padding: 4px 8px; height: 36px;">
+            <option value="">All Phases</option>
+            {% for phase in phases %}
+            <option value="{{ phase.id }}" {% if selected_phase_id == phase.id %}selected{% endif %}>{{ phase.seq }} - {{ phase.description }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label for="group_id" style="display: block; margin-bottom: 3px;">Group:</label>
+        <select id="group_id" name="group_id" style="min-width: 220px; padding: 4px 8px; height: 36px;">
+            <option value="">All Groups</option>
+            {% for step_group in step_groups %}
+            <option value="{{ step_group.id }}" data-phase-id="{{ step_group.phase_id }}" {% if selected_group_id == step_group.id %}selected{% endif %}>{{ step_group.seq }} - {{ step_group.description }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
 <table class="data-table">
     <thead>
         <tr>
             <th>ID</th>
-            <th>Phase</th>
-            <th>Group Seq</th>
-            <th>Group Desc</th>
+            <th style="min-width: 220px;">Phase</th>
+            <th>Group</th>
             <th>Step Seq</th>
             <th>Step Desc</th>
-            <th style="min-width: 340px; max-width: 600px; width: 36%;">Step SQL</th>
-            <th>Updated At</th>
-            <th>Updated By</th>
+            <th style="min-width: 280px; width: 28%;">Step SQL</th>
+            <th style="min-width: 160px;">Updated At</th>
+            <th style="min-width: 120px;">Updated By</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -24,14 +45,15 @@
         {% for step in steps %}
         <tr>
             <td>{{ step.id }}</td>
-            <td>{{ step.phase_seq }} - {{ step.phase_desc }}</td>
-            <td>{{ step.group_seq }}</td>
-            <td>{{ step.group_desc }}</td>
+            <td style="min-width: 220px;">{{ step.phase_seq }} - {{ step.phase_desc }}</td>
+            <td>{{ step.group_seq }} - {{ step.group_desc }}</td>
             <td>{{ step.seq }}</td>
             <td>{{ step.description }}</td>
-            <td><pre style="white-space: pre-wrap; word-break: break-all; min-width: 340px; max-width: 600px; width: 36%;">{{ step.step_sql }}</pre></td>
-            <td>{{ step.created_at | fmt_dt }}</td>
-            <td>{{ step.created_by }}</td>
+            <td style="min-width: 280px; width: 28%;">
+                <pre style="white-space: pre-wrap; word-break: break-all; width: 100%; margin: 0; box-sizing: border-box;">{{ step.step_sql }}</pre>
+            </td>
+            <td style="min-width: 160px; white-space: nowrap;">{{ step.created_at | fmt_dt }}</td>
+            <td style="min-width: 120px; white-space: nowrap;">{{ step.created_by }}</td>
             <td>
                 <a href="{{ url_for('step_edit', id=step.id) }}" class="btn btn-sm btn-primary">Edit</a>
                 <form method="POST" action="{{ url_for('step_delete', id=step.id) }}" style="display:inline;">
@@ -42,4 +64,36 @@
         {% endfor %}
     </tbody>
 </table>
+<script>
+(function () {
+    const filterForm = document.getElementById('step-filter-form');
+    const phaseSelect = document.getElementById('phase_id');
+    const groupSelect = document.getElementById('group_id');
+
+    function filterGroups() {
+        const phaseId = phaseSelect.value;
+        Array.from(groupSelect.options).forEach((option, index) => {
+            if (index === 0) {
+                option.hidden = false;
+                return;
+            }
+            option.hidden = !!phaseId && option.dataset.phaseId !== phaseId;
+        });
+
+        const selected = groupSelect.options[groupSelect.selectedIndex];
+        if (selected && selected.hidden) {
+            groupSelect.value = '';
+        }
+    }
+
+    phaseSelect.addEventListener('change', function () {
+        filterGroups();
+        filterForm.requestSubmit();
+    });
+    groupSelect.addEventListener('change', function () {
+        filterForm.requestSubmit();
+    });
+    filterGroups();
+})();
+</script>
 {% endblock %}
