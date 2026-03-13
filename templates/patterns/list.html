@@ -16,7 +16,8 @@
             <th title="Detailed description of the knitting pattern" style="min-width: 350px; max-width: 600px; width: 40vw;">Description</th>
             <th title="Category and sub-category of the knitting pattern">Category</th>
             <th title="Skill level required i.e. Basic, Easy, Intermediate, Complex">Difficulty</th>
-            <th title="Yarn weight recommended for this pattern">Yarn Weight</th>
+            <th title="Yarn Weight recommended for this pattern">Yarn Weight</th>
+            <th title="Link to the yarn used in this pattern">Yarn Used</th>
             <th title="Pattern Picture 1">Picture 1</th>
             <th>Actions</th>
         </tr>
@@ -31,6 +32,11 @@
             <td>{{ pattern.category or 'N/A' }} - {{ pattern.sub_category or 'N/A' }}</td>
             <td>{{ pattern.difficulty_name or 'N/A' }}</td>
             <td>{{ pattern.yarn_weight_name or 'Not specified' }}</td>
+            <td>
+                {% if pattern.yarn_used_url %}
+                <a href="{{ pattern.yarn_used_url }}" target="_blank" rel="noopener noreferrer" title="{{ pattern.yarn_used_url }}">&#128279; Link</a>
+                {% endif %}
+            </td>
             <td>
                 {% set pic_url = url_for('pattern_picture', id=pattern.id, pic=1) %}
                 <div class="schematic-thumb-wrapper" style="display: inline-block; position: relative;">
@@ -52,7 +58,7 @@
         {% endfor %}
         {% else %}
         <tr>
-            <td colspan="8" style="text-align: center; padding: 20px; color: #666;">
+            <td colspan="9" style="text-align: center; padding: 20px; color: #666;">
                 {% if total_patterns and total_patterns > 0 %}
                 <strong>No Active Patterns Found</strong><br>
                 There are {{ total_patterns }} pattern(s) in the database, but none are marked as active.<br>

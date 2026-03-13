@@ -122,6 +122,12 @@
                 <label for="additional_details">Additional Details:</label>
                 <textarea id="additional_details" name="additional_details" maxlength="150" rows="2">{{ pattern.additional_details or '' }}</textarea>
             </div>
+            <div class="form-group">
+                <label for="yarn_used_url">Yarn Used (URL):</label>
+                <input type="url" id="yarn_used_url" name="yarn_used_url" maxlength="500"
+                       value="{{ pattern.yarn_used_url or '' }}" placeholder="https://www.example.com/yarn">
+                <small>Link to the yarn product page (optional)</small>
+            </div>
         </div>
         <div class="column">
             <div class="form-group">

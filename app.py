@@ -770,6 +770,7 @@ def index():
         SELECT p.id, p.name, p.description, p.category_id, p.level_of_difficulty_id,
                p.yarn_weight_id, p.is_active, p.created_at, p.created_by,
                p.schematic IS NOT NULL as has_schematic,
+               p.yarn_used_url,
                COALESCE(pc.category, 'N/A') as category,
                COALESCE(pc.sub_category, 'N/A') as sub_category,
                COALESCE(lod.name, 'N/A') AS difficulty_name,
@@ -2859,6 +2860,7 @@ def patterns_list():
             SELECT p.id, p.name, p.description, p.category_id, p.level_of_difficulty_id,
                    p.yarn_weight_id, p.is_active, p.created_at, p.created_by,
                    p.schematic IS NOT NULL as has_schematic,
+                   p.yarn_used_url,
                    COALESCE(pc.category, 'N/A') as category,
                    COALESCE(pc.sub_category, 'N/A') as sub_category,
                    COALESCE(lod.name, 'N/A') AS difficulty_name,
@@ -2918,8 +2920,8 @@ def patterns_create():
 
         is_active = True if request.form.get('is_active') == 'on' else False
         query = """
-            INSERT INTO pattern (id, name, description, category_id, level_of_difficulty_id, yarn_weight_id, gauge_stitches_p4inch, gauge_rows_p4inch, schematic, picture1, picture2, picture3, additional_details, gauge_measurement, is_active, created_by)
-            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pattern), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO pattern (id, name, description, category_id, level_of_difficulty_id, yarn_weight_id, gauge_stitches_p4inch, gauge_rows_p4inch, schematic, picture1, picture2, picture3, additional_details, gauge_measurement, yarn_used_url, is_active, created_by)
+            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pattern), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         execute_query(query, (
             request.form['name'],
@@ -2935,6 +2937,7 @@ def patterns_create():
             picture3_data,
             request.form.get('additional_details', ''),
             gauge_measurement_data,
+            request.form.get('yarn_used_url', '').strip() or None,
             is_active,
             current_user.username
         ), fetch=False)
@@ -3035,8 +3038,8 @@ def patterns_edit(id):
 
         # Always update text fields
         update_fields.extend(['name = %s', 'description = %s', 'category_id = %s', 'level_of_difficulty_id = %s', 'yarn_weight_id = %s',
-                             'gauge_stitches_p4inch = %s', 'gauge_rows_p4inch = %s', 'additional_details = %s', 'is_active = %s',
-                             'created_by = %s', 'created_at = %s'])
+                             'gauge_stitches_p4inch = %s', 'gauge_rows_p4inch = %s', 'additional_details = %s', 'yarn_used_url = %s',
+                             'is_active = %s', 'created_by = %s', 'created_at = %s'])
         update_values.extend([
             request.form['name'],
             request.form.get('description', ''),
@@ -3046,6 +3049,7 @@ def patterns_edit(id):
             float(request.form['gauge_stitches_p4inch']) if request.form.get('gauge_stitches_p4inch') else None,
             float(request.form['gauge_rows_p4inch']) if request.form.get('gauge_rows_p4inch') else None,
             request.form.get('additional_details', ''),
+            request.form.get('yarn_used_url', '').strip() or None,
             is_active,
             current_user.username,
             _now()
