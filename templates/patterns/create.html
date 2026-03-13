@@ -109,13 +109,17 @@
             </div>
             <div class="form-group">
                 <label for="yarn_used">Yarn Used:</label>
-                <div style="display: flex; gap: 6px; align-items: center;">
-                    <input type="text" id="yarn_used" name="yarn_used" maxlength="200"
-                           placeholder="e.g., Malabrigo Rios Worsted" required style="flex: 1;">
-                    <input type="url" id="yarn_used_url" name="yarn_used_url" maxlength="500"
-                           placeholder="https://... (optional link)" style="flex: 1;">
-                </div>
-                <small>Enter the yarn name; optionally paste a product URL to make it a hyperlink</small>
+                <input type="text" id="yarn_used" name="yarn_used" maxlength="200"
+                       placeholder="e.g., Malabrigo Rios Worsted" required>
+                <details style="margin-top: 6px;">
+                    <summary style="cursor: pointer; color: #555;">Add optional hyperlink</summary>
+                    <div style="margin-top: 8px;">
+                        <label for="yarn_used_url" style="display: block; margin-bottom: 4px;">Link URL:</label>
+                        <input type="url" id="yarn_used_url" name="yarn_used_url" maxlength="500"
+                               placeholder="https://www.example.com/yarn">
+                    </div>
+                </details>
+                <small>Only the yarn text is shown in lists; if a URL is provided the text becomes clickable</small>
             </div>
         </div>
         <div class="column">
