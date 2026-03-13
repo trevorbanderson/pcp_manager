@@ -112,6 +112,19 @@
         </div>
     </div>
 
+    {% if edit_mode %}
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ get_full_name(chart.created_by) }} at {{ chart.created_at | fmt_dt }}</p>
+    {% else %}
+    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ current_user.full_name }} at (auto-set on save)</p>
+    {% endif %}
+    <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+        <button type="submit" id="submit-btn" class="btn btn-primary" style="height: 38px;" {% if not edit_mode %}disabled{% endif %}>{% if edit_mode %}Update Chart{% else %}Create Chart{% endif %}</button>
+        <a href="{% if pattern_id %}/charts?pattern_id={{ pattern_id }}{% else %}/charts{% endif %}" class="btn btn-secondary" style="height: 38px; display: flex; align-items: center; justify-content: center;">Cancel</a>
+        {% if edit_mode %}
+        <a href="/charts/{{ chart.id }}/pdf" class="btn pdf-btn" style="height: 38px; display: flex; align-items: center; justify-content: center; background: #6f42c1; color: white;">Download PDF</a>
+        {% endif %}
+    </div>
+
     <div style="margin-bottom: 16px;">
         <div id="grid-size-display" style="display: none;">Grid: 0x0 - Select piece, age, size, and gender to calculate dimensions</div>
         
@@ -133,19 +146,6 @@
             </table>
         </div>
         <div id="grid-message" style="font-size: 12px; color: #888; margin-top: 2px;">Chart grid will appear once dimensions are calculated.</div>
-    </div>
-    
-    {% if edit_mode %}
-    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ get_full_name(chart.created_by) }} at {{ chart.created_at | fmt_dt }}</p>
-    {% else %}
-    <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ current_user.full_name }} at (auto-set on save)</p>
-    {% endif %}
-    <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-        <button type="submit" id="submit-btn" class="btn btn-primary" style="height: 38px;" {% if not edit_mode %}disabled{% endif %}>{% if edit_mode %}Update Chart{% else %}Create Chart{% endif %}</button>
-        <a href="{% if pattern_id %}/charts?pattern_id={{ pattern_id }}{% else %}/charts{% endif %}" class="btn btn-secondary" style="height: 38px; display: flex; align-items: center; justify-content: center;">Cancel</a>
-        {% if edit_mode %}
-        <a href="/charts/{{ chart.id }}/pdf" class="btn pdf-btn" style="height: 38px; display: flex; align-items: center; justify-content: center; background: #6f42c1; color: white;">Download PDF</a>
-        {% endif %}
     </div>
 </form>
 

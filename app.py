@@ -2920,6 +2920,12 @@ def patterns_create():
             if file and file.filename:
                 gauge_measurement_data = file.read()
 
+        gauge_stitches_p4inch = int(float(request.form['gauge_stitches_p4inch'])) if request.form.get('gauge_stitches_p4inch') else None
+        gauge_rows_p4inch = int(float(request.form['gauge_rows_p4inch'])) if request.form.get('gauge_rows_p4inch') else None
+        if gauge_stitches_p4inch is None or gauge_rows_p4inch is None:
+            flash('Gauge stitches and gauge rows are required.', 'error')
+            return redirect(url_for('patterns_create'))
+
         yarn_weight_id = int(request.form['yarn_weight_id']) if request.form.get('yarn_weight_id') else None
         needle_size_us = int(request.form['needle_size_us']) if request.form.get('needle_size_us') else None
         if not yarn_weight_id:
@@ -2950,8 +2956,8 @@ def patterns_create():
             request.form['difficulty_level'],
             yarn_weight_id,
             needle_size_us,
-            float(request.form['gauge_stitches_p4inch']) if request.form.get('gauge_stitches_p4inch') else None,
-            float(request.form['gauge_rows_p4inch']) if request.form.get('gauge_rows_p4inch') else None,
+            gauge_stitches_p4inch,
+            gauge_rows_p4inch,
             schematic_data,
             picture1_data,
             picture2_data,
@@ -3044,6 +3050,12 @@ def patterns_edit(id):
             if file and file.filename:
                 gauge_measurement_data = file.read()
 
+        gauge_stitches_p4inch = int(float(request.form['gauge_stitches_p4inch'])) if request.form.get('gauge_stitches_p4inch') else None
+        gauge_rows_p4inch = int(float(request.form['gauge_rows_p4inch'])) if request.form.get('gauge_rows_p4inch') else None
+        if gauge_stitches_p4inch is None or gauge_rows_p4inch is None:
+            flash('Gauge stitches and gauge rows are required.', 'error')
+            return redirect(url_for('patterns_edit', id=id))
+
         yarn_weight_id = int(request.form['yarn_weight_id']) if request.form.get('yarn_weight_id') else None
         needle_size_us = int(request.form['needle_size_us']) if request.form.get('needle_size_us') else None
         if not yarn_weight_id:
@@ -3087,8 +3099,8 @@ def patterns_edit(id):
             request.form['difficulty_level'],
             yarn_weight_id,
             needle_size_us,
-            float(request.form['gauge_stitches_p4inch']) if request.form.get('gauge_stitches_p4inch') else None,
-            float(request.form['gauge_rows_p4inch']) if request.form.get('gauge_rows_p4inch') else None,
+            gauge_stitches_p4inch,
+            gauge_rows_p4inch,
             request.form.get('additional_details', ''),
             request.form.get('yarn_used', '').strip() or None,
             request.form.get('yarn_used_url', '').strip() or None,
