@@ -40,9 +40,16 @@
                 <select id="yarn_weight_id" name="yarn_weight_id">
                     <option value="">Select yarn weight...</option>
                     {% for yarn_weight in yarn_weights %}
-                    <option value="{{ yarn_weight.weight_id }}">{{ yarn_weight.weight_name }}</option>
+                    <option value="{{ yarn_weight.weight_id }}"
+                            data-lower-needle-us="{{ yarn_weight.lower_needle_size_us }}"
+                            data-upper-needle-us="{{ yarn_weight.upper_needle_size_us }}">{{ yarn_weight.weight_name }}</option>
                     {% endfor %}
                 </select>
+            </div>
+            <div class="form-group">
+                <label for="needle_size_us">Needle Size (US):</label>
+                <input type="number" id="needle_size_us" name="needle_size_us" step="1" min="0" disabled>
+                <small id="needle_size_help">Select a yarn weight to choose a needle size within its allowed range.</small>
             </div>
             <div class="form-group">
                 <label for="gauge_stitches_p4inch">Gauge - Stitches per 4 inches:</label>
@@ -155,4 +162,38 @@
         <a href="{{ url_for('patterns_list') }}" class="btn btn-sm">Cancel</a>
     </div>
 </form>
+<script>
+(function () {
+    const yarnWeightSelect = document.getElementById('yarn_weight_id');
+    const needleInput = document.getElementById('needle_size_us');
+    const helpText = document.getElementById('needle_size_help');
+
+    function syncNeedleRange() {
+        const selected = yarnWeightSelect.options[yarnWeightSelect.selectedIndex];
+        const lower = selected ? selected.dataset.lowerNeedleUs : '';
+        const upper = selected ? selected.dataset.upperNeedleUs : '';
+
+        if (!yarnWeightSelect.value || !lower || !upper) {
+            needleInput.value = '';
+            needleInput.disabled = true;
+            needleInput.removeAttribute('min');
+            needleInput.removeAttribute('max');
+            helpText.textContent = 'Select a yarn weight to choose a needle size within its allowed range.';
+            return;
+        }
+
+        needleInput.disabled = false;
+        needleInput.min = lower;
+        needleInput.max = upper;
+        needleInput.placeholder = lower + ' to ' + upper;
+        if (!needleInput.value || Number(needleInput.value) < Number(lower) || Number(needleInput.value) > Number(upper)) {
+            needleInput.value = lower;
+        }
+        helpText.textContent = 'Allowed range for this yarn weight: US ' + lower + ' to US ' + upper + '.';
+    }
+
+    yarnWeightSelect.addEventListener('change', syncNeedleRange);
+    syncNeedleRange();
+})();
+</script>
 {% endblock %}

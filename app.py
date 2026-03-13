@@ -768,7 +768,7 @@ def index():
     total_count = all_patterns[0]['count'] if all_patterns else 0
     patterns = execute_query("""
         SELECT p.id, p.name, p.description, p.category_id, p.level_of_difficulty_id,
-               p.yarn_weight_id, p.is_active, p.created_at, p.created_by,
+               p.yarn_weight_id, p.needle_size_us, p.is_active, p.created_at, p.created_by,
                p.schematic IS NOT NULL as has_schematic,
                p.yarn_used,
                p.yarn_used_url,
@@ -2859,7 +2859,7 @@ def patterns_list():
         # Get active patterns with necessary joins
         patterns = execute_query("""
             SELECT p.id, p.name, p.description, p.category_id, p.level_of_difficulty_id,
-                   p.yarn_weight_id, p.is_active, p.created_at, p.created_by,
+                   p.yarn_weight_id, p.needle_size_us, p.is_active, p.created_at, p.created_by,
                    p.schematic IS NOT NULL as has_schematic,
                    p.yarn_used,
                    p.yarn_used_url,
@@ -2920,17 +2920,36 @@ def patterns_create():
             if file and file.filename:
                 gauge_measurement_data = file.read()
 
+        yarn_weight_id = int(request.form['yarn_weight_id']) if request.form.get('yarn_weight_id') else None
+        needle_size_us = int(request.form['needle_size_us']) if request.form.get('needle_size_us') else None
+        if not yarn_weight_id:
+            needle_size_us = None
+        if yarn_weight_id and needle_size_us is not None:
+            yarn_weight_row = execute_query(
+                "SELECT lower_needle_size_us, upper_needle_size_us FROM yarn_weight WHERE weight_id = %s AND is_active = TRUE",
+                (yarn_weight_id,)
+            )
+            if not yarn_weight_row:
+                flash('Selected yarn weight was not found.', 'error')
+                return redirect(url_for('patterns_create'))
+            lower_us = yarn_weight_row[0]['lower_needle_size_us']
+            upper_us = yarn_weight_row[0]['upper_needle_size_us']
+            if needle_size_us < lower_us or needle_size_us > upper_us:
+                flash(f'Needle Size must be between US {lower_us} and US {upper_us} for the selected yarn weight.', 'error')
+                return redirect(url_for('patterns_create'))
+
         is_active = True if request.form.get('is_active') == 'on' else False
         query = """
-            INSERT INTO pattern (id, name, description, category_id, level_of_difficulty_id, yarn_weight_id, gauge_stitches_p4inch, gauge_rows_p4inch, schematic, picture1, picture2, picture3, additional_details, gauge_measurement, yarn_used, yarn_used_url, is_active, created_by)
-            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pattern), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO pattern (id, name, description, category_id, level_of_difficulty_id, yarn_weight_id, needle_size_us, gauge_stitches_p4inch, gauge_rows_p4inch, schematic, picture1, picture2, picture3, additional_details, gauge_measurement, yarn_used, yarn_used_url, is_active, created_by)
+            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM pattern), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         execute_query(query, (
             request.form['name'],
             request.form.get('description', ''),
             request.form['category_id'],
             request.form['difficulty_level'],
-            int(request.form['yarn_weight_id']) if request.form.get('yarn_weight_id') else None,
+            yarn_weight_id,
+            needle_size_us,
             float(request.form['gauge_stitches_p4inch']) if request.form.get('gauge_stitches_p4inch') else None,
             float(request.form['gauge_rows_p4inch']) if request.form.get('gauge_rows_p4inch') else None,
             schematic_data,
@@ -3025,6 +3044,24 @@ def patterns_edit(id):
             if file and file.filename:
                 gauge_measurement_data = file.read()
 
+        yarn_weight_id = int(request.form['yarn_weight_id']) if request.form.get('yarn_weight_id') else None
+        needle_size_us = int(request.form['needle_size_us']) if request.form.get('needle_size_us') else None
+        if not yarn_weight_id:
+            needle_size_us = None
+        if yarn_weight_id and needle_size_us is not None:
+            yarn_weight_row = execute_query(
+                "SELECT lower_needle_size_us, upper_needle_size_us FROM yarn_weight WHERE weight_id = %s AND is_active = TRUE",
+                (yarn_weight_id,)
+            )
+            if not yarn_weight_row:
+                flash('Selected yarn weight was not found.', 'error')
+                return redirect(url_for('patterns_edit', id=id))
+            lower_us = yarn_weight_row[0]['lower_needle_size_us']
+            upper_us = yarn_weight_row[0]['upper_needle_size_us']
+            if needle_size_us < lower_us or needle_size_us > upper_us:
+                flash(f'Needle Size must be between US {lower_us} and US {upper_us} for the selected yarn weight.', 'error')
+                return redirect(url_for('patterns_edit', id=id))
+
         # Get current pattern to preserve is_active if not specified in form
         current_pattern = execute_query("SELECT is_active FROM pattern WHERE id = %s", (id,))
 
@@ -3041,14 +3078,15 @@ def patterns_edit(id):
 
         # Always update text fields
         update_fields.extend(['name = %s', 'description = %s', 'category_id = %s', 'level_of_difficulty_id = %s', 'yarn_weight_id = %s',
-                             'gauge_stitches_p4inch = %s', 'gauge_rows_p4inch = %s', 'additional_details = %s', 'yarn_used = %s', 'yarn_used_url = %s',
+                             'needle_size_us = %s', 'gauge_stitches_p4inch = %s', 'gauge_rows_p4inch = %s', 'additional_details = %s', 'yarn_used = %s', 'yarn_used_url = %s',
                              'is_active = %s', 'created_by = %s', 'created_at = %s'])
         update_values.extend([
             request.form['name'],
             request.form.get('description', ''),
             request.form['category_id'],
             request.form['difficulty_level'],
-            int(request.form['yarn_weight_id']) if request.form.get('yarn_weight_id') else None,
+            yarn_weight_id,
+            needle_size_us,
             float(request.form['gauge_stitches_p4inch']) if request.form.get('gauge_stitches_p4inch') else None,
             float(request.form['gauge_rows_p4inch']) if request.form.get('gauge_rows_p4inch') else None,
             request.form.get('additional_details', ''),

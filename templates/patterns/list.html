@@ -17,6 +17,7 @@
             <th title="Category and sub-category of the knitting pattern">Category</th>
             <th title="Skill level required i.e. Basic, Easy, Intermediate, Complex">Difficulty</th>
             <th title="Yarn Weight recommended for this pattern">Yarn Weight</th>
+            <th title="US needle size selected for this pattern">Needle Size</th>
             <th title="Link to the yarn used in this pattern">Yarn Used</th>
             <th title="Pattern Picture 1">Picture 1</th>
             <th>Actions</th>
@@ -32,6 +33,7 @@
             <td>{{ pattern.category or 'N/A' }} - {{ pattern.sub_category or 'N/A' }}</td>
             <td>{{ pattern.difficulty_name or 'N/A' }}</td>
             <td>{{ pattern.yarn_weight_name or 'Not specified' }}</td>
+            <td>{% if pattern.needle_size_us is not none %}US {{ pattern.needle_size_us }}{% endif %}</td>
             <td>
                 {% if pattern.yarn_used %}
                     {% if pattern.yarn_used_url %}
@@ -76,7 +78,7 @@
         </tr>
         {% endif %}
     </tbody>
-</table>
+            <td colspan="10" style="text-align: center; padding: 20px; color: #666;">
 
 {# Force a reload when this page is restored from the browser's back-forward cache
    so that a pattern deleted in this session doesn't reappear on Back navigation. #}
