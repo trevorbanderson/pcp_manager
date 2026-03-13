@@ -15,7 +15,6 @@
             <th>Step Seq</th>
             <th>Step Desc</th>
             <th style="min-width: 340px; max-width: 600px; width: 36%;">Step SQL</th>
-            <th>Is Active</th>
             <th>Updated At</th>
             <th>Updated By</th>
             <th>Actions</th>
@@ -31,7 +30,6 @@
             <td>{{ step.seq }}</td>
             <td>{{ step.description }}</td>
             <td><pre style="white-space: pre-wrap; word-break: break-all; min-width: 340px; max-width: 600px; width: 36%;">{{ step.step_sql }}</pre></td>
-            <td>{{ 'Yes' if step.is_active else 'No' }}</td>
             <td>{{ step.created_at | fmt_dt }}</td>
             <td>{{ step.created_by }}</td>
             <td>

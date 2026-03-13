@@ -12,7 +12,6 @@
             <th>Phase</th>
             <th>Group Seq</th>
             <th>Group Description</th>
-            <th>Is Active</th>
             <th>Updated At</th>
             <th>Updated By</th>
             <th>Actions</th>
@@ -25,7 +24,6 @@
             <td>{{ step_group.phase_seq }} - {{ step_group.phase_desc }}</td>
             <td>{{ step_group.seq }}</td>
             <td>{{ step_group.description }}</td>
-            <td>{{ 'Yes' if step_group.is_active else 'No' }}</td>
             <td>{{ step_group.created_at | fmt_dt }}</td>
             <td>{{ step_group.created_by }}</td>
             <td>

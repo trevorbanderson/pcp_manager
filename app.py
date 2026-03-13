@@ -834,7 +834,7 @@ def pieces_delete(id):
     return redirect(url_for('pieces_list'))
 
 def _phase_options():
-    return execute_query("SELECT * FROM phase ORDER BY seq, id") or []
+    return execute_query("SELECT * FROM phase WHERE is_active = TRUE ORDER BY seq, id") or []
 
 
 def _step_group_options():
@@ -843,6 +843,7 @@ def _step_group_options():
         SELECT sg.*, p.seq AS phase_seq, p.description AS phase_desc
         FROM step_group sg
         JOIN phase p ON sg.phase_id = p.id
+        WHERE sg.is_active = TRUE AND p.is_active = TRUE
         ORDER BY p.seq, sg.seq, sg.id
         """
     ) or []
@@ -859,13 +860,12 @@ def phases_create():
     if request.method == 'POST':
         execute_query(
             """
-            INSERT INTO phase (id, seq, description, is_active, created_by)
-            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM phase), %s, %s, %s, %s)
+            INSERT INTO phase (id, seq, description, created_by)
+            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM phase), %s, %s, %s)
             """,
             (
                 int(request.form['seq']),
                 request.form['description'],
-                request.form.get('is_active', 'true').lower() == 'true',
                 current_user.username,
             ),
             fetch=False,
@@ -877,7 +877,7 @@ def phases_create():
 
 @app.route('/phases/edit/<int:id>', methods=['GET', 'POST'], endpoint='phases_edit')
 def phases_edit(id):
-    phase = execute_query("SELECT * FROM phase WHERE id = %s", (id,))
+    phase = execute_query("SELECT * FROM phase WHERE id = %s AND is_active = TRUE", (id,))
     phase = phase[0] if phase else None
     if not phase:
         flash('Phase not found.', 'danger')
@@ -887,13 +887,12 @@ def phases_edit(id):
         execute_query(
             """
             UPDATE phase
-            SET seq = %s, description = %s, is_active = %s, created_by = %s, created_at = %s
+            SET seq = %s, description = %s, created_by = %s, created_at = %s
             WHERE id = %s
             """,
             (
                 int(request.form['seq']),
                 request.form['description'],
-                request.form.get('is_active', 'true').lower() == 'true',
                 current_user.username,
                 _now(),
                 id,
@@ -907,7 +906,9 @@ def phases_edit(id):
 
 @app.route('/phases/delete/<int:id>', methods=['POST'], endpoint='phases_delete')
 def phases_delete(id):
-    execute_query("DELETE FROM phase WHERE id = %s", (id,), fetch=False)
+    execute_query("UPDATE step SET is_active = FALSE WHERE step_group_id IN (SELECT id FROM step_group WHERE phase_id = %s)", (id,), fetch=False)
+    execute_query("UPDATE step_group SET is_active = FALSE WHERE phase_id = %s", (id,), fetch=False)
+    execute_query("UPDATE phase SET is_active = FALSE WHERE id = %s", (id,), fetch=False)
     flash('Phase deleted successfully!', 'success')
     return redirect(url_for('phases_list'))
 
@@ -924,14 +925,13 @@ def step_groups_create():
     if request.method == 'POST':
         execute_query(
             """
-            INSERT INTO step_group (id, phase_id, seq, description, is_active, created_by)
-            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM step_group), %s, %s, %s, %s, %s)
+            INSERT INTO step_group (id, phase_id, seq, description, created_by)
+            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM step_group), %s, %s, %s, %s)
             """,
             (
                 int(request.form['phase_id']),
                 int(request.form['seq']),
                 request.form['description'],
-                request.form.get('is_active', 'true').lower() == 'true',
                 current_user.username,
             ),
             fetch=False,
@@ -943,7 +943,7 @@ def step_groups_create():
 
 @app.route('/step_groups/edit/<int:id>', methods=['GET', 'POST'], endpoint='step_groups_edit')
 def step_groups_edit(id):
-    step_group = execute_query("SELECT * FROM step_group WHERE id = %s", (id,))
+    step_group = execute_query("SELECT * FROM step_group WHERE id = %s AND is_active = TRUE", (id,))
     step_group = step_group[0] if step_group else None
     if not step_group:
         flash('Group not found.', 'danger')
@@ -954,14 +954,13 @@ def step_groups_edit(id):
         execute_query(
             """
             UPDATE step_group
-            SET phase_id = %s, seq = %s, description = %s, is_active = %s, created_by = %s, created_at = %s
+            SET phase_id = %s, seq = %s, description = %s, created_by = %s, created_at = %s
             WHERE id = %s
             """,
             (
                 int(request.form['phase_id']),
                 int(request.form['seq']),
                 request.form['description'],
-                request.form.get('is_active', 'true').lower() == 'true',
                 current_user.username,
                 _now(),
                 id,
@@ -975,14 +974,15 @@ def step_groups_edit(id):
 
 @app.route('/step_groups/delete/<int:id>', methods=['POST'], endpoint='step_groups_delete')
 def step_groups_delete(id):
-    execute_query("DELETE FROM step_group WHERE id = %s", (id,), fetch=False)
+    execute_query("UPDATE step SET is_active = FALSE WHERE step_group_id = %s", (id,), fetch=False)
+    execute_query("UPDATE step_group SET is_active = FALSE WHERE id = %s", (id,), fetch=False)
     flash('Group deleted successfully!', 'success')
     return redirect(url_for('step_groups_list'))
 
 
 @app.route('/step/delete/<int:id>', methods=['POST'], endpoint='step_delete')
 def step_delete(id):
-    execute_query("DELETE FROM step WHERE id = %s", (id,), fetch=False)
+    execute_query("UPDATE step SET is_active = FALSE WHERE id = %s", (id,), fetch=False)
     flash('Step deleted successfully!', 'success')
     return redirect(url_for('step_list'))
 
@@ -996,6 +996,7 @@ def step_list():
         FROM step s
         JOIN step_group sg ON s.step_group_id = sg.id
         JOIN phase p ON sg.phase_id = p.id
+        WHERE s.is_active = TRUE AND sg.is_active = TRUE AND p.is_active = TRUE
         ORDER BY p.seq, sg.seq, s.seq, s.id
         """
     )
@@ -1009,15 +1010,14 @@ def step_create():
     if request.method == 'POST':
         execute_query(
             """
-            INSERT INTO step (id, step_group_id, seq, description, step_sql, is_active, created_by)
-            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM step), %s, %s, %s, %s, %s, %s)
+            INSERT INTO step (id, step_group_id, seq, description, step_sql, created_by)
+            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM step), %s, %s, %s, %s, %s)
             """,
             (
                 int(request.form['step_group_id']),
                 int(request.form['seq']),
                 request.form.get('description'),
                 request.form.get('step_sql'),
-                request.form.get('is_active', 'true').lower() == 'true',
                 current_user.username,
             ),
             fetch=False,
@@ -1034,7 +1034,7 @@ def step_edit(id):
         SELECT s.*, sg.phase_id
         FROM step s
         JOIN step_group sg ON s.step_group_id = sg.id
-        WHERE s.id = %s
+        WHERE s.id = %s AND s.is_active = TRUE AND sg.is_active = TRUE
         """,
         (id,),
     )
@@ -1050,7 +1050,7 @@ def step_edit(id):
             """
             UPDATE step
             SET step_group_id = %s, seq = %s, description = %s, step_sql = %s,
-                is_active = %s, created_by = %s, created_at = %s
+                created_by = %s, created_at = %s
             WHERE id = %s
             """,
             (
@@ -1058,7 +1058,6 @@ def step_edit(id):
                 int(request.form['seq']),
                 request.form.get('description'),
                 request.form.get('step_sql'),
-                request.form.get('is_active', 'true').lower() == 'true',
                 current_user.username,
                 _now(),
                 id,

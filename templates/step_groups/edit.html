@@ -23,13 +23,6 @@
             <label for="description" style="width: 180px;">Group Description:</label>
             <input type="text" id="description" name="description" value="{{ step_group.description }}" required style="padding: 4px 8px; width: 320px; height: 36px;">
         </div>
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <label for="is_active" style="width: 180px;">Is Active:</label>
-            <select id="is_active" name="is_active" style="width: 120px; height: 36px;">
-                <option value="true" {% if step_group.is_active %}selected{% endif %}>True</option>
-                <option value="false" {% if not step_group.is_active %}selected{% endif %}>False</option>
-            </select>
-        </div>
         <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ get_full_name(step_group.created_by) }} at {{ step_group.created_at | fmt_dt }}</p>
     </div>
     <div style="margin-top: 18px;">

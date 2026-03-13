@@ -11,7 +11,6 @@
             <th>ID</th>
             <th>Seq</th>
             <th>Description</th>
-            <th>Is Active</th>
             <th>Updated At</th>
             <th>Updated By</th>
             <th>Actions</th>
@@ -23,7 +22,6 @@
             <td>{{ phase.id }}</td>
             <td>{{ phase.seq }}</td>
             <td>{{ phase.description }}</td>
-            <td>{{ 'Yes' if phase.is_active else 'No' }}</td>
             <td>{{ phase.created_at | fmt_dt }}</td>
             <td>{{ phase.created_by }}</td>
             <td>
