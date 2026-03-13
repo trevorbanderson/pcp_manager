@@ -8,28 +8,28 @@
 <form method="POST">
     <div style="display: flex; flex-direction: column; gap: 14px; max-width: 700px;">
         <div style="display: flex; align-items: center; gap: 12px;">
-            <label for="phase_seq" style="width: 180px;">Phase Seq:</label>
-            <input type="number" id="phase_seq" name="phase_seq" value="{{ step.phase_seq }}" required style="padding: 4px 8px; width: 220px; height: 36px;">
+            <label for="phase_id" style="width: 180px;">Phase:</label>
+            <select id="phase_id" name="phase_id" required style="padding: 4px 8px; width: 320px; height: 36px;">
+                {% for phase in phases %}
+                <option value="{{ phase.id }}" {% if phase.id == step.phase_id %}selected{% endif %}>{{ phase.seq }} - {{ phase.description }}</option>
+                {% endfor %}
+            </select>
         </div>
         <div style="display: flex; align-items: center; gap: 12px;">
-            <label for="phase_desc" style="width: 180px;">Phase Desc:</label>
-            <input type="text" id="phase_desc" name="phase_desc" value="{{ step.phase_desc }}" required style="padding: 4px 8px; width: 220px; height: 36px;">
+            <label for="step_group_id" style="width: 180px;">Group:</label>
+            <select id="step_group_id" name="step_group_id" required style="padding: 4px 8px; width: 320px; height: 36px;">
+                {% for step_group in step_groups %}
+                <option value="{{ step_group.id }}" data-phase-id="{{ step_group.phase_id }}" {% if step_group.id == step.step_group_id %}selected{% endif %}>{{ step_group.seq }} - {{ step_group.description }}</option>
+                {% endfor %}
+            </select>
         </div>
         <div style="display: flex; align-items: center; gap: 12px;">
-            <label for="group_seq" style="width: 180px;">Group Seq:</label>
-            <input type="number" id="group_seq" name="group_seq" value="{{ step.group_seq }}" style="padding: 4px 8px; width: 220px; height: 36px;">
+            <label for="seq" style="width: 180px;">Step Seq:</label>
+            <input type="number" id="seq" name="seq" value="{{ step.seq }}" required style="padding: 4px 8px; width: 220px; height: 36px;">
         </div>
         <div style="display: flex; align-items: center; gap: 12px;">
-            <label for="group_desc" style="width: 180px;">Group Desc:</label>
-            <input type="text" id="group_desc" name="group_desc" value="{{ step.group_desc }}" style="padding: 4px 8px; width: 220px; height: 36px;">
-        </div>
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <label for="step_seq" style="width: 180px;">Step Seq:</label>
-            <input type="number" id="step_seq" name="step_seq" value="{{ step.step_seq }}" required style="padding: 4px 8px; width: 220px; height: 36px;">
-        </div>
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <label for="step_desc" style="width: 180px;">Step Desc:</label>
-            <input type="text" id="step_desc" name="step_desc" value="{{ step.step_desc }}" style="padding: 4px 8px; width: 220px; height: 36px;">
+            <label for="description" style="width: 180px;">Step Desc:</label>
+            <input type="text" id="description" name="description" value="{{ step.description }}" style="padding: 4px 8px; width: 320px; height: 36px;">
         </div>
         <div style="display: flex; align-items: center; gap: 12px;">
             <label for="step_sql" style="width: 180px;">Step SQL:</label>
@@ -49,4 +49,25 @@
         <a href="{{ url_for('step_list') }}" class="btn btn-secondary btn-sm">Cancel</a>
     </div>
 </form>
+<script>
+(function () {
+    const phaseSelect = document.getElementById('phase_id');
+    const groupSelect = document.getElementById('step_group_id');
+
+    function filterGroups() {
+        const phaseId = phaseSelect.value;
+        Array.from(groupSelect.options).forEach((option) => {
+            option.hidden = option.dataset.phaseId !== phaseId;
+        });
+
+        const selected = groupSelect.options[groupSelect.selectedIndex];
+        if (!selected || selected.hidden) {
+            groupSelect.value = '';
+        }
+    }
+
+    phaseSelect.addEventListener('change', filterGroups);
+    filterGroups();
+})();
+</script>
 {% endblock %}

@@ -1,16 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Step List{% endblock %}
+{% block title %}Steps{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>Step List</h2>
+    <h2>Steps</h2>
     <a href="{{ url_for('step_create') }}" class="btn btn-primary">Add Step</a>
 </div>
 <table class="data-table">
     <thead>
         <tr>
             <th>ID</th>
-            <th>Phase Seq</th>
-            <th>Phase Desc</th>
+            <th>Phase</th>
             <th>Group Seq</th>
             <th>Group Desc</th>
             <th>Step Seq</th>
@@ -26,12 +25,11 @@
         {% for step in steps %}
         <tr>
             <td>{{ step.id }}</td>
-            <td>{{ step.phase_seq }}</td>
-            <td>{{ step.phase_desc }}</td>
+            <td>{{ step.phase_seq }} - {{ step.phase_desc }}</td>
             <td>{{ step.group_seq }}</td>
             <td>{{ step.group_desc }}</td>
-            <td>{{ step.step_seq }}</td>
-            <td>{{ step.step_desc }}</td>
+            <td>{{ step.seq }}</td>
+            <td>{{ step.description }}</td>
             <td><pre style="white-space: pre-wrap; word-break: break-all; min-width: 340px; max-width: 600px; width: 36%;">{{ step.step_sql }}</pre></td>
             <td>{{ 'Yes' if step.is_active else 'No' }}</td>
             <td>{{ step.created_at | fmt_dt }}</td>

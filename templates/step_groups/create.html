@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Create Group{% endblock %}
+{% block content %}
+<div style="margin-bottom: 15px;">
+    <h2 style="margin: 0; display: inline-block;">Create Group</h2>
+    <a href="{{ url_for('step_groups_list') }}" class="btn btn-secondary" style="float: right;">Back to List</a>
+</div>
+<form method="POST">
+    <div style="display: flex; flex-direction: column; gap: 14px; max-width: 700px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <label for="phase_id" style="width: 180px;">Phase:</label>
+            <select id="phase_id" name="phase_id" required style="padding: 4px 8px; width: 320px; height: 36px;">
+                <option value="">Select Phase</option>
+                {% for phase in phases %}
+                <option value="{{ phase.id }}">{{ phase.seq }} - {{ phase.description }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <label for="seq" style="width: 180px;">Group Seq:</label>
+            <input type="number" id="seq" name="seq" required style="padding: 4px 8px; width: 220px; height: 36px;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <label for="description" style="width: 180px;">Group Description:</label>
+            <input type="text" id="description" name="description" required style="padding: 4px 8px; width: 320px; height: 36px;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <label for="is_active" style="width: 180px;">Is Active:</label>
+            <select id="is_active" name="is_active" style="width: 120px; height: 36px;">
+                <option value="true">True</option>
+                <option value="false">False</option>
+            </select>
+        </div>
+        <p style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;">Updated by {{ current_user.full_name }} at (auto-set on save)</p>
+    </div>
+    <div style="margin-top: 18px;">
+        <button type="submit" class="btn btn-primary btn-sm">Create</button>
+        <a href="{{ url_for('step_groups_list') }}" class="btn btn-secondary btn-sm">Cancel</a>
+    </div>
+</form>
+{% endblock %}

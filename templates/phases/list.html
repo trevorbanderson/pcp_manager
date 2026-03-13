@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Phases{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Phases</h2>
+    <a href="{{ url_for('phases_create') }}" class="btn btn-primary">Add Phase</a>
+</div>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Seq</th>
+            <th>Description</th>
+            <th>Is Active</th>
+            <th>Updated At</th>
+            <th>Updated By</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for phase in phases %}
+        <tr>
+            <td>{{ phase.id }}</td>
+            <td>{{ phase.seq }}</td>
+            <td>{{ phase.description }}</td>
+            <td>{{ 'Yes' if phase.is_active else 'No' }}</td>
+            <td>{{ phase.created_at | fmt_dt }}</td>
+            <td>{{ phase.created_by }}</td>
+            <td>
+                <a href="{{ url_for('phases_edit', id=phase.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                <form method="POST" action="{{ url_for('phases_delete', id=phase.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this phase and its groups/steps?');">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

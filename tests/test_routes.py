@@ -110,6 +110,12 @@ class TestAuthenticatedListRoutes:
     def test_level_of_difficulty_list(self, auth_client):
         assert auth_client.get('/level_of_difficulty').status_code == 200
 
+    def test_phases_list(self, auth_client):
+        assert auth_client.get('/phases').status_code == 200
+
+    def test_step_groups_list(self, auth_client):
+        assert auth_client.get('/step_groups').status_code == 200
+
     def test_step_list(self, auth_client):
         assert auth_client.get('/step').status_code == 200
 
@@ -157,6 +163,12 @@ class TestCreateForms:
     def test_sizes_create_form(self, auth_client):
         assert auth_client.get('/sizes/create').status_code == 200
 
+    def test_phases_create_form(self, auth_client):
+        assert auth_client.get('/phases/create').status_code == 200
+
+    def test_step_groups_create_form(self, auth_client):
+        assert auth_client.get('/step_groups/create').status_code == 200
+
     def test_step_create_form(self, auth_client):
         assert auth_client.get('/step/create').status_code == 200
 
@@ -191,6 +203,12 @@ class TestEditNotFound:
 
     def test_sizes_edit_not_found(self, auth_client):
         assert auth_client.get('/sizes/edit/9999').status_code == 302
+
+    def test_phases_edit_not_found(self, auth_client):
+        assert auth_client.get('/phases/edit/9999').status_code == 302
+
+    def test_step_groups_edit_not_found(self, auth_client):
+        assert auth_client.get('/step_groups/edit/9999').status_code == 302
 
     def test_step_edit_not_found(self, auth_client):
         assert auth_client.get('/step/edit/9999').status_code == 302
@@ -250,11 +268,22 @@ class TestCreatePost:
         })
         assert resp.status_code == 302
 
+    def test_phases_create(self, auth_client):
+        resp = auth_client.post('/phases/create', data={
+            'seq': '1', 'description': 'Phase 1', 'is_active': 'true'
+        })
+        assert resp.status_code == 302
+
+    def test_step_groups_create(self, auth_client):
+        resp = auth_client.post('/step_groups/create', data={
+            'phase_id': '1', 'seq': '1', 'description': 'Group A', 'is_active': 'true'
+        })
+        assert resp.status_code == 302
+
     def test_step_create(self, auth_client):
         resp = auth_client.post('/step/create', data={
-            'phase_seq': '1', 'phase_desc': 'Phase 1',
-            'group_seq': '1', 'group_desc': 'Group A',
-            'step_seq': '1', 'step_desc': 'Do something',
+            'phase_id': '1', 'step_group_id': '1',
+            'seq': '1', 'description': 'Do something',
             'step_sql': '', 'is_active': 'true',
         })
         assert resp.status_code == 302
@@ -322,6 +351,12 @@ class TestDeleteRoutes:
 
     def test_sizes_delete(self, auth_client):
         assert auth_client.post('/sizes/delete/1').status_code == 302
+
+    def test_phases_delete(self, auth_client):
+        assert auth_client.post('/phases/delete/1').status_code == 302
+
+    def test_step_groups_delete(self, auth_client):
+        assert auth_client.post('/step_groups/delete/1').status_code == 302
 
     def test_step_delete(self, auth_client):
         assert auth_client.post('/step/delete/1').status_code == 302

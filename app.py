@@ -833,66 +833,241 @@ def pieces_delete(id):
     flash('Piece deleted successfully!', 'success')
     return redirect(url_for('pieces_list'))
 
+def _phase_options():
+    return execute_query("SELECT * FROM phase ORDER BY seq, id") or []
+
+
+def _step_group_options():
+    return execute_query(
+        """
+        SELECT sg.*, p.seq AS phase_seq, p.description AS phase_desc
+        FROM step_group sg
+        JOIN phase p ON sg.phase_id = p.id
+        ORDER BY p.seq, sg.seq, sg.id
+        """
+    ) or []
+
+
+@app.route('/phases', methods=['GET'], endpoint='phases_list')
+def phases_list():
+    phases = _phase_options()
+    return render_template('phases/list.html', phases=phases)
+
+
+@app.route('/phases/create', methods=['GET', 'POST'], endpoint='phases_create')
+def phases_create():
+    if request.method == 'POST':
+        execute_query(
+            """
+            INSERT INTO phase (id, seq, description, is_active, created_by)
+            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM phase), %s, %s, %s, %s)
+            """,
+            (
+                int(request.form['seq']),
+                request.form['description'],
+                request.form.get('is_active', 'true').lower() == 'true',
+                current_user.username,
+            ),
+            fetch=False,
+        )
+        flash('Phase created successfully!', 'success')
+        return redirect(url_for('phases_list'))
+    return render_template('phases/create.html')
+
+
+@app.route('/phases/edit/<int:id>', methods=['GET', 'POST'], endpoint='phases_edit')
+def phases_edit(id):
+    phase = execute_query("SELECT * FROM phase WHERE id = %s", (id,))
+    phase = phase[0] if phase else None
+    if not phase:
+        flash('Phase not found.', 'danger')
+        return redirect(url_for('phases_list'))
+
+    if request.method == 'POST':
+        execute_query(
+            """
+            UPDATE phase
+            SET seq = %s, description = %s, is_active = %s, created_by = %s, created_at = %s
+            WHERE id = %s
+            """,
+            (
+                int(request.form['seq']),
+                request.form['description'],
+                request.form.get('is_active', 'true').lower() == 'true',
+                current_user.username,
+                _now(),
+                id,
+            ),
+            fetch=False,
+        )
+        flash('Phase updated successfully!', 'success')
+        return redirect(url_for('phases_list'))
+    return render_template('phases/edit.html', phase=phase)
+
+
+@app.route('/phases/delete/<int:id>', methods=['POST'], endpoint='phases_delete')
+def phases_delete(id):
+    execute_query("DELETE FROM phase WHERE id = %s", (id,), fetch=False)
+    flash('Phase deleted successfully!', 'success')
+    return redirect(url_for('phases_list'))
+
+
+@app.route('/step_groups', methods=['GET'], endpoint='step_groups_list')
+def step_groups_list():
+    step_groups = _step_group_options()
+    return render_template('step_groups/list.html', step_groups=step_groups)
+
+
+@app.route('/step_groups/create', methods=['GET', 'POST'], endpoint='step_groups_create')
+def step_groups_create():
+    phases = _phase_options()
+    if request.method == 'POST':
+        execute_query(
+            """
+            INSERT INTO step_group (id, phase_id, seq, description, is_active, created_by)
+            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM step_group), %s, %s, %s, %s, %s)
+            """,
+            (
+                int(request.form['phase_id']),
+                int(request.form['seq']),
+                request.form['description'],
+                request.form.get('is_active', 'true').lower() == 'true',
+                current_user.username,
+            ),
+            fetch=False,
+        )
+        flash('Group created successfully!', 'success')
+        return redirect(url_for('step_groups_list'))
+    return render_template('step_groups/create.html', phases=phases)
+
+
+@app.route('/step_groups/edit/<int:id>', methods=['GET', 'POST'], endpoint='step_groups_edit')
+def step_groups_edit(id):
+    step_group = execute_query("SELECT * FROM step_group WHERE id = %s", (id,))
+    step_group = step_group[0] if step_group else None
+    if not step_group:
+        flash('Group not found.', 'danger')
+        return redirect(url_for('step_groups_list'))
+
+    phases = _phase_options()
+    if request.method == 'POST':
+        execute_query(
+            """
+            UPDATE step_group
+            SET phase_id = %s, seq = %s, description = %s, is_active = %s, created_by = %s, created_at = %s
+            WHERE id = %s
+            """,
+            (
+                int(request.form['phase_id']),
+                int(request.form['seq']),
+                request.form['description'],
+                request.form.get('is_active', 'true').lower() == 'true',
+                current_user.username,
+                _now(),
+                id,
+            ),
+            fetch=False,
+        )
+        flash('Group updated successfully!', 'success')
+        return redirect(url_for('step_groups_list'))
+    return render_template('step_groups/edit.html', step_group=step_group, phases=phases)
+
+
+@app.route('/step_groups/delete/<int:id>', methods=['POST'], endpoint='step_groups_delete')
+def step_groups_delete(id):
+    execute_query("DELETE FROM step_group WHERE id = %s", (id,), fetch=False)
+    flash('Group deleted successfully!', 'success')
+    return redirect(url_for('step_groups_list'))
+
+
 @app.route('/step/delete/<int:id>', methods=['POST'], endpoint='step_delete')
 def step_delete(id):
     execute_query("DELETE FROM step WHERE id = %s", (id,), fetch=False)
     flash('Step deleted successfully!', 'success')
     return redirect(url_for('step_list'))
 
+
 @app.route('/step', methods=['GET'], endpoint='step_list')
 def step_list():
-    steps = execute_query("SELECT * FROM step ORDER BY id")
-    return render_template('step/list.html', steps=steps)
+    steps = execute_query(
+        """
+        SELECT s.*, sg.phase_id, sg.seq AS group_seq, sg.description AS group_desc,
+               p.seq AS phase_seq, p.description AS phase_desc
+        FROM step s
+        JOIN step_group sg ON s.step_group_id = sg.id
+        JOIN phase p ON sg.phase_id = p.id
+        ORDER BY p.seq, sg.seq, s.seq, s.id
+        """
+    )
+    return render_template('step/list.html', steps=steps or [])
+
 
 @app.route('/step/create', methods=['GET', 'POST'], endpoint='step_create')
 def step_create():
+    phases = _phase_options()
+    step_groups = _step_group_options()
     if request.method == 'POST':
-        query = '''
-            INSERT INTO step (id, phase_seq, phase_desc, group_seq, group_desc, step_seq, step_desc, step_sql, is_active, created_by)
-            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM step), %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        '''
-        execute_query(query, (
-            int(request.form['phase_seq']),
-            request.form['phase_desc'],
-            int(request.form['group_seq']) if request.form.get('group_seq') else None,
-            request.form.get('group_desc'),
-            int(request.form['step_seq']),
-            request.form.get('step_desc'),
-            request.form.get('step_sql'),
-            request.form.get('is_active', 'true').lower() == 'true',
-            current_user.username
-        ), fetch=False)
+        execute_query(
+            """
+            INSERT INTO step (id, step_group_id, seq, description, step_sql, is_active, created_by)
+            VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM step), %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                int(request.form['step_group_id']),
+                int(request.form['seq']),
+                request.form.get('description'),
+                request.form.get('step_sql'),
+                request.form.get('is_active', 'true').lower() == 'true',
+                current_user.username,
+            ),
+            fetch=False,
+        )
         flash('Step created successfully!', 'success')
         return redirect(url_for('step_list'))
-    return render_template('step/create.html')
+    return render_template('step/create.html', phases=phases, step_groups=step_groups)
+
 
 @app.route('/step/edit/<int:id>', methods=['GET', 'POST'], endpoint='step_edit')
 def step_edit(id):
-    step = execute_query("SELECT * FROM step WHERE id = %s", (id,))
+    step = execute_query(
+        """
+        SELECT s.*, sg.phase_id
+        FROM step s
+        JOIN step_group sg ON s.step_group_id = sg.id
+        WHERE s.id = %s
+        """,
+        (id,),
+    )
     step = step[0] if step else None
     if not step:
         flash('Step not found.', 'danger')
         return redirect(url_for('step_list'))
+
+    phases = _phase_options()
+    step_groups = _step_group_options()
     if request.method == 'POST':
-        query = '''
-            UPDATE step SET phase_seq=%s, phase_desc=%s, group_seq=%s, group_desc=%s, step_seq=%s, step_desc=%s, step_sql=%s, is_active=%s, created_by=%s, created_at=%s WHERE id=%s
-        '''
-        execute_query(query, (
-            int(request.form['phase_seq']),
-            request.form['phase_desc'],
-            int(request.form['group_seq']) if request.form.get('group_seq') else None,
-            request.form.get('group_desc'),
-            int(request.form['step_seq']),
-            request.form.get('step_desc'),
-            request.form.get('step_sql'),
-            request.form.get('is_active', 'true').lower() == 'true',
-            current_user.username,
-            _now(),
-            id
-        ), fetch=False)
+        execute_query(
+            """
+            UPDATE step
+            SET step_group_id = %s, seq = %s, description = %s, step_sql = %s,
+                is_active = %s, created_by = %s, created_at = %s
+            WHERE id = %s
+            """,
+            (
+                int(request.form['step_group_id']),
+                int(request.form['seq']),
+                request.form.get('description'),
+                request.form.get('step_sql'),
+                request.form.get('is_active', 'true').lower() == 'true',
+                current_user.username,
+                _now(),
+                id,
+            ),
+            fetch=False,
+        )
         flash('Step updated successfully!', 'success')
         return redirect(url_for('step_list'))
-    return render_template('step/edit.html', step=step)
+    return render_template('step/edit.html', step=step, phases=phases, step_groups=step_groups)
 
 @app.route('/pcp_info', methods=['GET'], endpoint='pcp_info_list')
 def pcp_info_list():
